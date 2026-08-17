@@ -17,22 +17,58 @@ export interface VaultMetaRecord {
 }
 
 /**
+ * A row's actual content lives entirely in `dataEnc` — one AES-GCM-encrypted JSON
+ * blob per record, produced by VaultService.encryptField. Only what a query genuinely
+ * needs (the primary key, the foreign key used to look up parties by case, and a
+ * sort key) is stored in the clear.
+ *
+ * This has a consequence worth knowing: because the encrypted payload's *shape* is
+ * just TypeScript, not a Dexie schema, adding or renaming a field inside a case or
+ * party (e.g. Chunk 24 adding fee-waiver fields to Case) is a plain code change —
+ * no `.version()` bump, no migration. A `.version()` bump is only needed when the
+ * plain, indexed columns change (a new lookup key, a new table).
+ */
+export interface StoredCaseRecord {
+  id: string
+  createdAt: number
+  updatedAt: number
+  dataEnc: string
+}
+
+export interface StoredPartyRecord {
+  id: string
+  caseId: string
+  createdAt: number
+  updatedAt: number
+  dataEnc: string
+}
+
+/**
  * Schema versions are additive and permanent: once a `.version(n)` block ships, it
  * is never edited, only superseded by a new `.version(n + 1)` with an `.upgrade()`
  * migration. This is the versioned-migration discipline the blueprint calls for —
  * enforced by convention here since Dexie itself won't stop you from editing history.
+ * Each `.version().stores()` call must restate every table, not just the new ones —
+ * that's Dexie's own model, not a convention.
  *
- * v1 (this chunk): vault metadata only. Chunk 4 adds `cases`/`parties` in v2, and so
- * on — each future chunk's schema change is a new version block appended below,
- * never a rewrite of this one.
+ * v1: vault metadata only.
+ * v2 (this chunk): cases and parties, indexed by id (+ caseId for parties) and
+ * createdAt for chronological listing.
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
+  cases!: EntityTable<StoredCaseRecord, 'id'>
+  parties!: EntityTable<StoredPartyRecord, 'id'>
 
   constructor(name = 'plcm') {
     super(name)
     this.version(1).stores({
       vaultMeta: 'id',
+    })
+    this.version(2).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
     })
   }
 }
