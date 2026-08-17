@@ -1,0 +1,31 @@
+.button {
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--plcm-radius-md);
+  text-align: center;
+  cursor: pointer;
+  background: linear-gradient(120deg, var(--plcm-purple-deep), var(--plcm-blue));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 30px -12px rgba(76, 29, 149, 1);
+  font: 700 13px/1 var(--plcm-font-sans);
+  color: #fff;
+  transition: transform 0.16s ease;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  box-shadow: none;
+}
+
+.button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.secondary {
+  composes: button;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--plcm-glass-border);
+  box-shadow: none;
+  color: var(--plcm-text);
+}
