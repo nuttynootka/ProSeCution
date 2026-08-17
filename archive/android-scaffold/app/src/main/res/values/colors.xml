@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Minimal placeholder palette. The real design-system tokens (matte charcoal
+         base, royal purple / cobalt accents) land in Chunk 2. -->
+    <color name="plcm_background">#FF08080B</color>
+    <color name="ic_launcher_background">#FF131316</color>
+</resources>

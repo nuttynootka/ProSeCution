@@ -1,0 +1,25 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Test + build artifacts
+test-results/
+playwright-report/
+blob-report/
+screenshots/
+.vite/
+*.tsbuildinfo
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.swp
+
+# Never commit provider keys or signing material.
+.env
+.env.*
+!.env.example
+secrets.json

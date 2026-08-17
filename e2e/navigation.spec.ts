@@ -1,0 +1,34 @@
+import { expect, test } from '@playwright/test'
+import { DESTINATIONS, START_PATH } from '../src/nav/destinations'
+
+// Chunk 1's acceptance test: the shell loads, every destination is reachable from the
+// bottom bar, and unknown routes fall back to the start destination.
+
+test('opens on the start destination', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('screen-cases')).toBeVisible()
+  expect(page.url()).toContain(`#${START_PATH}`)
+})
+
+test('every destination is reachable from the bottom bar', async ({ page }) => {
+  await page.goto('/')
+
+  for (const destination of DESTINATIONS) {
+    await page.getByTestId(`nav-${destination.label.toLowerCase()}`).click()
+    await expect(page.getByTestId(destination.testId)).toBeVisible()
+    expect(page.url()).toContain(`#${destination.path}`)
+  }
+})
+
+test('marks only the current destination as active', async ({ page }) => {
+  await page.goto('/#/vault')
+
+  const active = page.locator('.bottom-nav__item--active')
+  await expect(active).toHaveCount(1)
+  await expect(active).toHaveAttribute('data-testid', 'nav-vault')
+})
+
+test('unknown routes redirect to the start destination', async ({ page }) => {
+  await page.goto('/#/does-not-exist')
+  await expect(page.getByTestId('screen-cases')).toBeVisible()
+})

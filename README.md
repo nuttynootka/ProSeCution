@@ -1,25 +1,70 @@
-# CODING AGENTS: READ THIS FIRST
+# ProSeCution — Pro Se Legal Case Manager
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+An offline-first, privacy-first case manager for self-represented litigants. Built as an
+installable web app (PWA) targeting Android.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+> **Not legal advice.** This is a document and deadline management tool. Anything it
+> generates is a working draft that a human must review and adopt before filing.
 
-## What you should do — IMPORTANT
+## Status
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+Early construction. The work is broken into 51 reviewable chunks across 11 stages;
+Chunk 1 (project scaffold) is complete.
 
-**Read `project/Pro Se Legal Case Manager.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+| Stage | Scope | State |
+| --- | --- | --- |
+| 1 | Foundation shell + design system | Chunk 1 done |
+| 2 | Encrypted store, cases & parties | not started |
+| 3 | Documents, OCR, timeline | not started |
+| 4 | Deadline engine + calendar export | not started |
+| 5 | PDF templates & form filler | not started |
+| 6 | Compliance (PII redaction, service, fee waiver, backup) | not started |
+| 7 | Local MVP checkpoint | not started |
+| 8 | Retrieval backend | not started |
+| 9–10 | AI agents (grounded Q&A, drafting, opposing-filing audit) | not started |
+| 11 | Hardening & release | not started |
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+## Planned capabilities
 
-## About the design files
+Document intake with on-device OCR and confidence-based correction; a chronological case
+timeline with full-text search; jurisdiction-aware deadline calculation exported to the
+phone's native calendar; PDF court-form filling with a ruled-line paragraph engine;
+automated PII redaction; proof-of-service and fee-waiver generation; encrypted backup and
+restore; and AI assistance for grounded legal Q&A, motion drafting and opposing-filing
+analysis — all strictly grounded in a cited legal corpus.
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+## Design decisions worth knowing
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+- **Deadline reminders go through the system calendar.** The web platform has no offline
+  scheduled-notification API. Writing deadlines into the phone's own calendar means
+  Android fires reminders natively — more reliable than app-scheduled alarms, since
+  Android aggressively kills background apps.
+- **Encrypted at rest, with an honest caveat.** Case data is encrypted with AES-256-GCM
+  via Web Crypto, keyed from a user passphrase. Unlike a native app there is no
+  hardware-backed key isolation, and the key lives in memory while unlocked.
+- **No cloud backup.** Case files never sync anywhere. The only migration path is a
+  passphrase-protected encrypted export.
+- **AI is optional and bring-your-own-key.** Ships with a free default; supplying your own
+  API key unlocks stronger models. Generation runs client-side and goes directly to the
+  chosen provider. The UI discloses each provider's data-training policy at the point of
+  selection.
 
-## Bundle contents
+## Development
 
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `Professional Legal Android App` project files (HTML prototypes, assets, components)
+```bash
+npm install
+npm run dev        # dev server
+npm run build      # typecheck + production build
+npm run test:e2e   # Playwright, emulating a Pixel 7
+npm run icons      # regenerate PWA icons from public/icons/icon.svg
+```
+
+Pushes to `main` build, test and deploy to GitHub Pages automatically.
+
+## Repository layout
+
+- `src/` — application source
+- `e2e/` — Playwright specs and screenshot capture
+- `project/`, `chats/` — the original Claude Design mockup and design conversation, kept
+  as the visual specification
+- `archive/android-scaffold/` — an earlier native Kotlin scaffold, superseded by the PWA

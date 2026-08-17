@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Platform-level theme only: it paints the window before Compose takes over, so
+      launch does not flash white. All in-app styling is Compose-side (Chunk 2).
+    -->
+    <style name="Theme.PLCM" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/plcm_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

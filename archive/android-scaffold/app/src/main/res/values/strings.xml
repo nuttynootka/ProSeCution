@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Case Manager</string>
+
+    <string name="nav_cases">Cases</string>
+    <string name="nav_deadlines">Deadlines</string>
+    <string name="nav_intake">Intake</string>
+    <string name="nav_counsel">Counsel</string>
+    <string name="nav_vault">Vault</string>
+</resources>
