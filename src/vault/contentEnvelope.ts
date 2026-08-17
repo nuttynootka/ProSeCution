@@ -1,12 +1,16 @@
-import type { VaultService } from '../vault/VaultService'
+import type { VaultService } from './VaultService'
 
 /**
  * Wraps encrypted JSON content with a version tag, per the blueprint's requirement
  * that JSON columns carry an explicit version. This versions the *decrypted content
  * shape* (do old records have the fields new code expects?) — a separate concern
- * from the Dexie schema version in db.ts, which versions the plain indexed columns.
+ * from a Dexie schema version, which versions the plain indexed columns.
  * A content-shape change (e.g. a later chunk renaming a field) bumps `CONTENT_VERSION`
- * and adds a case in `migrateContent`; it never touches db.ts.
+ * and adds a case in `migrateContent`; it never touches a db.ts schema.
+ *
+ * Generic over the stored shape, so every module with its own encrypted record type
+ * (cases, documents, and whatever comes after) shares this rather than each growing
+ * its own copy.
  */
 const CONTENT_VERSION = 1
 

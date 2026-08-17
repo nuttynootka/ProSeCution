@@ -181,3 +181,46 @@ describe('unlock on a vault that was never set up', () => {
     await expect(vault.unlock('anything')).rejects.toThrow(VaultNotSetUpError)
   })
 })
+
+describe('encryptBinary / decryptBinary', () => {
+  it('round-trips raw bytes', async () => {
+    const { vault } = freshVault()
+    await vault.setUp('correct horse battery staple')
+    const bytes = new Uint8Array([0, 1, 2, 253, 254, 255, 128, 64, 10, 13])
+
+    const field = await vault.encryptBinary(bytes)
+    const decrypted = await vault.decryptBinary(field)
+
+    expect(decrypted).toEqual(bytes)
+  })
+
+  it('produces ciphertext that does not contain the plaintext bytes', async () => {
+    const { vault } = freshVault()
+    await vault.setUp('correct horse battery staple')
+    const plaintext = new TextEncoder().encode('DISTINCTIVE-BINARY-MARKER-000-11-2222')
+
+    const field = await vault.encryptBinary(plaintext)
+
+    const asLatin1 = Buffer.from(field.ciphertext).toString('latin1')
+    expect(asLatin1).not.toContain('DISTINCTIVE-BINARY-MARKER')
+  })
+
+  it('throws VaultLockedError when locked', async () => {
+    const { vault } = freshVault()
+    await expect(vault.encryptBinary(new Uint8Array([1, 2, 3]))).rejects.toThrow(VaultLockedError)
+  })
+
+  it('rejects decryption under a DEK from an entirely different vault', async () => {
+    const { vault } = freshVault()
+    await vault.setUp('correct horse battery staple')
+    const field = await vault.encryptBinary(new Uint8Array([9, 9, 9]))
+
+    // A second, independent database/vault — its own random DEK, unrelated to the
+    // first. Proves decryption is bound to the specific key, not just "some vault
+    // happens to be unlocked."
+    const { vault: unrelatedVault } = freshVault()
+    await unrelatedVault.setUp('a completely unrelated passphrase')
+
+    await expect(unrelatedVault.decryptBinary(field)).rejects.toThrow()
+  })
+})

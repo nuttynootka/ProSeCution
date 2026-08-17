@@ -1,7 +1,7 @@
 import { monotonicNow } from '../lib/monotonicClock'
 import type { PlcmDatabase, StoredCaseRecord } from '../vault/db'
 import type { VaultService } from '../vault/VaultService'
-import { decryptContent, encryptContent } from './envelope'
+import { decryptContent, encryptContent } from '../vault/contentEnvelope'
 import type { Case, CaseContent, CaseInput } from './types'
 
 export class CaseRepository {
@@ -51,10 +51,11 @@ export class CaseRepository {
     return { ...updated, id, createdAt: record.createdAt, updatedAt }
   }
 
-  /** Deletes the case and every party attached to it, atomically — no orphaned encrypted party records. */
+  /** Deletes the case and everything attached to it — parties, documents — atomically. No orphaned encrypted records of either kind. */
   async delete(id: string): Promise<void> {
-    await this.#db.transaction('rw', this.#db.cases, this.#db.parties, async () => {
+    await this.#db.transaction('rw', this.#db.cases, this.#db.parties, this.#db.documents, async () => {
       await this.#db.parties.where('caseId').equals(id).delete()
+      await this.#db.documents.where('caseId').equals(id).delete()
       await this.#db.cases.delete(id)
     })
   }

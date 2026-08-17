@@ -1,7 +1,7 @@
 import { monotonicNow } from '../lib/monotonicClock'
 import type { PlcmDatabase, StoredPartyRecord } from '../vault/db'
 import type { VaultService } from '../vault/VaultService'
-import { decryptContent, encryptContent } from './envelope'
+import { decryptContent, encryptContent } from '../vault/contentEnvelope'
 import type { Party, PartyContent } from './types'
 
 export class PartyRepository {

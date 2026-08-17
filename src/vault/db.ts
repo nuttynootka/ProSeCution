@@ -44,6 +44,24 @@ export interface StoredPartyRecord {
 }
 
 /**
+ * Metadata (filename, mime type, size) follows the same `dataEnc` envelope pattern
+ * as cases/parties. The file bytes themselves don't — `VaultService.encryptField`
+ * exists for text (UTF-8 + base64-in-JSON), which is real overhead per megabyte on
+ * a scanned document. `fileIv`/`fileCiphertext` are the raw AES-GCM output stored
+ * directly as Dexie Uint8Array fields, the same way vaultMeta stores its own
+ * ciphertext bytes — a pattern already proven rather than something new.
+ */
+export interface StoredDocumentRecord {
+  id: string
+  caseId: string
+  createdAt: number
+  updatedAt: number
+  dataEnc: string
+  fileIv: Uint8Array
+  fileCiphertext: Uint8Array
+}
+
+/**
  * Schema versions are additive and permanent: once a `.version(n)` block ships, it
  * is never edited, only superseded by a new `.version(n + 1)` with an `.upgrade()`
  * migration. This is the versioned-migration discipline the blueprint calls for —
@@ -52,13 +70,15 @@ export interface StoredPartyRecord {
  * that's Dexie's own model, not a convention.
  *
  * v1: vault metadata only.
- * v2 (this chunk): cases and parties, indexed by id (+ caseId for parties) and
- * createdAt for chronological listing.
+ * v2: cases and parties, indexed by id (+ caseId for parties) and createdAt for
+ * chronological listing.
+ * v3 (this chunk): documents, indexed the same way as parties (id, caseId, createdAt).
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
   cases!: EntityTable<StoredCaseRecord, 'id'>
   parties!: EntityTable<StoredPartyRecord, 'id'>
+  documents!: EntityTable<StoredDocumentRecord, 'id'>
 
   constructor(name = 'plcm') {
     super(name)
@@ -69,6 +89,12 @@ export class PlcmDatabase extends Dexie {
       vaultMeta: 'id',
       cases: 'id, createdAt',
       parties: 'id, caseId, createdAt',
+    })
+    this.version(3).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
     })
   }
 }

@@ -13,6 +13,8 @@ import {
   type EncryptedField,
 } from './crypto'
 
+export type { EncryptedField } from './crypto'
+
 export class VaultNotSetUpError extends Error {
   constructor() {
     super('Vault has not been set up yet.')
@@ -140,6 +142,24 @@ export class VaultService {
     const field = unpackField(packed)
     const plaintext = await decryptBytes(field, this.#dek)
     return textDecoder.decode(plaintext)
+  }
+
+  /**
+   * Raw-byte counterpart to encryptField, for content that isn't text — document
+   * scans, PDFs. Skips the UTF-8 + base64-string packing encryptField does for
+   * Dexie-friendly text fields: base64 costs ~33% size and a full string-building
+   * pass, real overhead once files run several megabytes. Callers store `iv` and
+   * `ciphertext` as their own Uint8Array fields (see documents/DocumentRepository.ts).
+   */
+  async encryptBinary(plaintext: Uint8Array): Promise<EncryptedField> {
+    if (!this.#dek) throw new VaultLockedError()
+    return encryptBytes(plaintext, this.#dek)
+  }
+
+  /** Inverse of encryptBinary. Same failure modes as decryptField: locked vault, tampered ciphertext, wrong key. */
+  async decryptBinary(field: EncryptedField): Promise<Uint8Array> {
+    if (!this.#dek) throw new VaultLockedError()
+    return decryptBytes(field, this.#dek)
   }
 }
 
