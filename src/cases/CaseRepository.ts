@@ -2,7 +2,7 @@ import { monotonicNow } from '../lib/monotonicClock'
 import type { PlcmDatabase, StoredCaseRecord } from '../vault/db'
 import type { VaultService } from '../vault/VaultService'
 import { decryptContent, encryptContent } from './envelope'
-import type { Case, CaseContent } from './types'
+import type { Case, CaseContent, CaseInput } from './types'
 
 export class CaseRepository {
   #db: PlcmDatabase
@@ -13,7 +13,9 @@ export class CaseRepository {
     this.#vault = vault
   }
 
-  async create(content: CaseContent): Promise<Case> {
+  /** Every case starts at the 'pleadings' stage — not caller-supplied, same as id/createdAt. */
+  async create(input: CaseInput): Promise<Case> {
+    const content: CaseContent = { ...input, currentStage: 'pleadings' }
     const now = monotonicNow()
     const record: StoredCaseRecord = {
       id: crypto.randomUUID(),

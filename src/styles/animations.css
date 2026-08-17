@@ -1,9 +1,23 @@
 /*
- * Keyframes carried over verbatim from the mockup. Only the ones this chunk's
- * components actually use — aurora drift, the nav's shifting active-tab glow, and
- * the screen entrance transition. Others (spinAng, scanProgress, travel, breathe,
- * shimmer, eq) belong to later chunks and are added when those screens are built.
+ * Keyframes carried over verbatim from the mockup, added as each chunk's
+ * components need them. Still missing: scanProgress, travel, breathe, shimmer, eq —
+ * those belong to later chunks (Intake, Deadlines, Vault, Co-Counsel).
  */
+
+/* Drives the posture card's rotating conic-gradient border (Chunk 6). Custom
+   properties must be registered to be animatable — a plain CSS variable can't be
+   interpolated as an angle without this. */
+@property --ang {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-ang {
+  to {
+    --ang: 360deg;
+  }
+}
 
 @keyframes aurora-a {
   0% {

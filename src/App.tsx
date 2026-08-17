@@ -3,6 +3,7 @@ import { AuroraBackground } from './components/AuroraBackground'
 import { TabShellLayout } from './components/TabShellLayout'
 import { START_PATH } from './nav/destinations'
 import { PassphraseGate } from './vault/PassphraseGate'
+import { CaseDashboardScreen } from './screens/CaseDashboardScreen'
 import { CasesScreen } from './screens/CasesScreen'
 import { CounselScreen } from './screens/CounselScreen'
 import { DeadlinesScreen } from './screens/DeadlinesScreen'
@@ -28,6 +29,7 @@ export function App() {
           <Routes>
             <Route element={<TabShellLayout />}>
               <Route path="/cases" element={<CasesScreen />} />
+              <Route path="/cases/:caseId" element={<CaseDashboardScreen />} />
               <Route path="/deadlines" element={<DeadlinesScreen />} />
               <Route path="/intake" element={<IntakeScreen />} />
               <Route path="/counsel" element={<CounselScreen />} />
