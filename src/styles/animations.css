@@ -1,0 +1,61 @@
+/*
+ * Keyframes carried over verbatim from the mockup. Only the ones this chunk's
+ * components actually use — aurora drift, the nav's shifting active-tab glow, and
+ * the screen entrance transition. Others (spinAng, scanProgress, travel, breathe,
+ * shimmer, eq) belong to later chunks and are added when those screens are built.
+ */
+
+@keyframes aurora-a {
+  0% {
+    transform: translate(-12%, -6%) scale(1);
+  }
+  50% {
+    transform: translate(28%, 14%) scale(1.35);
+  }
+  100% {
+    transform: translate(-12%, -6%) scale(1);
+  }
+}
+
+@keyframes aurora-b {
+  0% {
+    transform: translate(20%, 10%) scale(1.2);
+  }
+  50% {
+    transform: translate(-18%, -14%) scale(0.9);
+  }
+  100% {
+    transform: translate(20%, 10%) scale(1.2);
+  }
+}
+
+@keyframes nav-hue {
+  0% {
+    filter: blur(15px) hue-rotate(-30deg);
+  }
+  50% {
+    filter: blur(15px) hue-rotate(35deg);
+  }
+  100% {
+    filter: blur(15px) hue-rotate(-30deg);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

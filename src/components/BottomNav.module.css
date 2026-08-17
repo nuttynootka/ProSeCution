@@ -1,0 +1,82 @@
+.nav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  padding: 16px 10px calc(18px + env(safe-area-inset-bottom, 0px));
+}
+
+.slot {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+/* The shifting glow that sits behind the active tab, per the design chat's
+   direction: "have the active button look like it is glowing from behind with a
+   gentle glow of slowly shifting blue and purple." */
+.glow {
+  position: absolute;
+  inset: -16px -10px -10px;
+  border-radius: 26px;
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.75),
+    rgba(37, 99, 235, 0.42) 55%,
+    rgba(37, 99, 235, 0) 76%
+  );
+  animation: nav-hue 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.item {
+  position: relative;
+  width: 100%;
+  max-width: 60px;
+  padding: 10px 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  border-radius: 18px;
+  text-decoration: none;
+  color: var(--plcm-text-dim);
+
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--plcm-glass-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    4px 6px 14px -8px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  transition:
+    color 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.itemActive {
+  color: #f4f2ff;
+  background: linear-gradient(160deg, rgba(58, 45, 92, 0.92), rgba(23, 22, 30, 0.92));
+  border-color: rgba(196, 181, 253, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    6px 10px 20px -8px rgba(76, 29, 149, 0.55);
+  transform: translateY(-3px);
+}
+
+.icon {
+  flex: none;
+}
+
+.label {
+  font: 600 9px/1 var(--plcm-font-sans);
+  letter-spacing: 0.06em;
+}

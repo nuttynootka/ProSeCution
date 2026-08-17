@@ -1,0 +1,28 @@
+.surface {
+  border-radius: var(--plcm-radius-lg);
+  border: 1px solid var(--plcm-glass-border);
+  box-shadow: var(--plcm-glass-inset);
+  backdrop-filter: blur(var(--plcm-glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--plcm-glass-blur)) saturate(1.4);
+}
+
+/* No backdrop-filter support: fall back to a more opaque fill so text stays
+   readable against whatever is behind it, rather than a blur that never applies. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .default {
+    background: linear-gradient(160deg, #2a2a30, #1a1a1e);
+  }
+  .accent {
+    background: linear-gradient(160deg, #3a2d5c, #23325c);
+  }
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .default {
+    background: var(--plcm-glass-fill);
+  }
+  .accent {
+    background: var(--plcm-glass-accent-fill);
+    border-color: var(--plcm-glass-accent-border);
+  }
+}

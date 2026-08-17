@@ -1,0 +1,32 @@
+/*
+ * Self-hosted rather than fetched from Google Fonts at runtime: the app is
+ * offline-first, and a cold start with no network shouldn't fall back to a system
+ * font for something this visible.
+ *
+ * Manrope is shipped as its variable binary — one file serves every weight used
+ * below (300–800) instead of six static cuts.
+ */
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/manrope-variable.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-500.woff2') format('woff2');
+}

@@ -1,0 +1,54 @@
+.root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.blobA {
+  top: -16%;
+  left: -26%;
+  width: 110%;
+  height: 52%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.16), rgba(124, 58, 237, 0) 66%);
+  filter: blur(46px);
+  animation: aurora-a 18s ease-in-out infinite;
+}
+
+.blobB {
+  top: 24%;
+  right: -34%;
+  width: 100%;
+  height: 56%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.13), rgba(37, 99, 235, 0) 66%);
+  filter: blur(52px);
+  animation: aurora-b 23s ease-in-out infinite;
+}
+
+.blobC {
+  bottom: -18%;
+  left: -10%;
+  width: 90%;
+  height: 44%;
+  background: radial-gradient(circle, rgba(76, 29, 149, 0.14), rgba(76, 29, 149, 0) 68%);
+  filter: blur(58px);
+  animation: aurora-a 27s ease-in-out infinite reverse;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 78%);
+}

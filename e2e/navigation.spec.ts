@@ -23,7 +23,10 @@ test('every destination is reachable from the bottom bar', async ({ page }) => {
 test('marks only the current destination as active', async ({ page }) => {
   await page.goto('/#/vault')
 
-  const active = page.locator('.bottom-nav__item--active')
+  // React Router's NavLink sets aria-current="page" on the active link — checking
+  // that (rather than a CSS class) survives style refactors and is what assistive
+  // tech actually relies on.
+  const active = page.locator('[aria-current="page"]')
   await expect(active).toHaveCount(1)
   await expect(active).toHaveAttribute('data-testid', 'nav-vault')
 })

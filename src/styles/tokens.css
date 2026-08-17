@@ -1,0 +1,60 @@
+/*
+ * Design tokens transcribed directly from the mockup's inline styles
+ * (project/Pro Se Legal Case Manager.dc.html) — colors, gradients and blur values
+ * here are not judgment calls, they're copied values.
+ */
+
+:root {
+  /* Base surface */
+  --plcm-bg: #08080b;
+  --plcm-surface: #131316;
+  --plcm-surface-2: #18181b;
+
+  /* Text */
+  --plcm-text: #e8e8ee;
+  --plcm-text-dim: rgba(232, 232, 238, 0.52);
+  --plcm-text-faint: rgba(232, 232, 238, 0.4);
+  --plcm-heading: #f4f4f8;
+
+  /* Accent — royal purple / cobalt blue */
+  --plcm-purple: #7c3aed;
+  --plcm-purple-light: #a78bfa;
+  --plcm-purple-lighter: #c4b5fd;
+  --plcm-purple-deep: #4c1d95;
+  --plcm-blue: #2563eb;
+  --plcm-blue-light: #60a5fa;
+  --plcm-link: #8b9cff;
+  --plcm-link-hover: #b6c2ff;
+
+  /* Glass surface — the vocabulary every card in the mockup shares */
+  --plcm-glass-fill: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.02)
+  );
+  --plcm-glass-border: rgba(255, 255, 255, 0.09);
+  --plcm-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --plcm-glass-blur: 22px;
+
+  /* Accent glass — used for emphasized cards (e.g. the active nav plate) */
+  --plcm-glass-accent-fill: linear-gradient(
+    160deg,
+    rgba(124, 58, 237, 0.28),
+    rgba(37, 99, 235, 0.14)
+  );
+  --plcm-glass-accent-border: rgba(167, 139, 250, 0.28);
+
+  /* Type */
+  --plcm-font-sans: 'Manrope', system-ui, sans-serif;
+  --plcm-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Radii */
+  --plcm-radius-lg: 20px;
+  --plcm-radius-md: 16px;
+  --plcm-radius-sm: 12px;
+  --plcm-radius-pill: 999px;
+
+  --plcm-nav-height: 84px;
+
+  color-scheme: dark;
+}

@@ -1,4 +1,5 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AuroraBackground } from './components/AuroraBackground'
 import { BottomNav } from './components/BottomNav'
 import { START_PATH } from './nav/destinations'
 import { CasesScreen } from './screens/CasesScreen'
@@ -10,12 +11,13 @@ import { VaultScreen } from './screens/VaultScreen'
 /**
  * HashRouter rather than BrowserRouter: GitHub Pages has no server-side rewrite, so
  * deep links under a real path 404 on refresh. Hashes sidestep that entirely, and the
- * URL is not visible once the app is installed to the home screen.
+ * URL is not visible once installed to the home screen.
  */
 export function App() {
   return (
     <HashRouter>
       <div className="app-shell">
+        <AuroraBackground />
         <main className="app-shell__content">
           <Routes>
             <Route path="/cases" element={<CasesScreen />} />
