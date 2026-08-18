@@ -4,12 +4,20 @@ import { caseRepository } from '../cases'
 import { GlassSurface } from '../components/GlassSurface'
 import { documentRepository } from '../documents'
 import { categorizeDocument, DOCUMENT_TYPES, extractCaseNumber, recognizeText, type DocumentType } from '../ocr'
+import { detectPii, redactText, type PiiMatch } from '../redaction'
 import { ChipGroup } from '../wizard/ChipGroup'
 import { SectionLabel, TextInput } from '../wizard/Field'
 import { PrimaryButton } from '../wizard/PrimaryButton'
 import styles from './DocumentReviewScreen.module.css'
 
 const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map((t) => ({ value: t, label: t }))
+
+const PII_TYPE_LABEL: Record<PiiMatch['type'], string> = {
+  ssn: 'SSN',
+  dob: 'Date of birth',
+  'minor-dob': "Minor's date of birth",
+  'financial-account': 'Financial account',
+}
 
 type Phase = 'loading' | 'ready' | 'saving' | 'load-error'
 
@@ -51,7 +59,10 @@ export function DocumentReviewScreen() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [fields, setFields] = useState<Fields | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [stubNote, setStubNote] = useState<'redact' | 'template' | null>(null)
+  const [stubNote, setStubNote] = useState<'template' | null>(null)
+  const [piiMatches, setPiiMatches] = useState<PiiMatch[]>([])
+  const [excludedMatches, setExcludedMatches] = useState<Set<number>>(new Set())
+  const [redactionApplied, setRedactionApplied] = useState(false)
 
   useEffect(() => {
     if (!documentId) return
@@ -72,6 +83,7 @@ export function DocumentReviewScreen() {
             ocrConfidence: result.confidence,
             caseNumber: extractCaseNumber(result.text) ?? '',
           })
+          setPiiMatches(detectPii(result.text))
         } else {
           if (cancelled) return
           setFields({ documentType: 'Other', hasOcr: false, ocrText: '', ocrConfidence: null, caseNumber: '' })
@@ -89,6 +101,35 @@ export function DocumentReviewScreen() {
   }, [documentId])
 
   const patch = (partial: Partial<Fields>) => setFields((prev) => (prev ? { ...prev, ...partial } : prev))
+
+  // Re-scanning on every hand-edit, rather than reusing the matches found right after
+  // OCR, keeps match offsets valid — a manual correction upstream in the text would
+  // otherwise silently shift every match after it out from under its own span.
+  const handleOcrTextChange = (text: string) => {
+    patch({ ocrText: text })
+    setPiiMatches(detectPii(text))
+    setExcludedMatches(new Set())
+    setRedactionApplied(false)
+  }
+
+  const toggleMatch = (index: number) => {
+    setExcludedMatches((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+
+  const activeMatches = piiMatches.filter((_, i) => !excludedMatches.has(i))
+
+  const handleApplyRedaction = () => {
+    if (!fields) return
+    patch({ ocrText: redactText(fields.ocrText, activeMatches) })
+    setPiiMatches([])
+    setExcludedMatches(new Set())
+    setRedactionApplied(true)
+  }
 
   const goBackToCase = () => navigate(`/cases/${caseId}`)
 
@@ -174,7 +215,7 @@ export function DocumentReviewScreen() {
                 <textarea
                   className={styles.ocrTextarea}
                   value={fields.ocrText}
-                  onChange={(e) => patch({ ocrText: e.target.value })}
+                  onChange={(e) => handleOcrTextChange(e.target.value)}
                   rows={6}
                   data-testid="ocr-text-input"
                   placeholder="No text was found — you can type it in by hand."
@@ -200,17 +241,46 @@ export function DocumentReviewScreen() {
               />
             </GlassSurface>
 
-            <button
-              type="button"
-              className={styles.stubCard}
-              onClick={() => setStubNote('redact')}
-              data-testid="stub-redact"
-            >
-              <div className={styles.stubTitle}>Redact sensitive info</div>
-              <div className={styles.stubNote}>
-                {stubNote === 'redact' ? 'Automatic redaction arrives in a later update.' : 'SSNs, DOBs, and account numbers'}
+            {piiMatches.length > 0 && (
+              <GlassSurface
+                style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}
+                data-testid="redaction-panel"
+              >
+                <SectionLabel>Sensitive information detected</SectionLabel>
+                <p className={styles.note}>
+                  Review each item below — uncheck anything that shouldn't be redacted — then redact before saving.
+                </p>
+                <div className={styles.redactionList}>
+                  {piiMatches.map((match, i) => (
+                    <label key={`${match.start}-${match.end}`} className={styles.redactionRow} data-testid="redaction-match">
+                      <input
+                        type="checkbox"
+                        checked={!excludedMatches.has(i)}
+                        onChange={() => toggleMatch(i)}
+                        data-testid="redaction-match-checkbox"
+                      />
+                      <span className={styles.redactionType}>{PII_TYPE_LABEL[match.type]}</span>
+                      <span className={styles.redactionText}>{match.text}</span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className={styles.redactButton}
+                  onClick={handleApplyRedaction}
+                  disabled={activeMatches.length === 0}
+                  data-testid="redaction-apply"
+                >
+                  Redact {activeMatches.length} item{activeMatches.length === 1 ? '' : 's'}
+                </button>
+              </GlassSurface>
+            )}
+
+            {redactionApplied && (
+              <div className={styles.redactedNote} data-testid="redaction-applied-note">
+                Sensitive information has been redacted from the scanned text above.
               </div>
-            </button>
+            )}
 
             <button
               type="button"

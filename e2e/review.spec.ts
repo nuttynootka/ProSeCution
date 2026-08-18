@@ -57,9 +57,7 @@ test('scanning a real document runs OCR, categorizes it, and extracts the case n
   await expect(page.getByTestId('case-number-display')).toHaveText('24CV1234')
 })
 
-test('the honest-stub redaction and template cards say they are not built yet, without pretending to do anything', async ({
-  page,
-}) => {
+test('the honest-stub template card says it is not built yet, without pretending to do anything', async ({ page }) => {
   await setUpVault(page)
   await createCaseAndOpenDashboard(page)
 
@@ -70,8 +68,9 @@ test('the honest-stub redaction and template cards say they are not built yet, w
   await page.getByTestId('crop-confirm').click()
   await expect(page.getByTestId('review-loading')).toBeHidden({ timeout: 30_000 })
 
-  await page.getByTestId('stub-redact').click()
-  await expect(page.getByText('Automatic redaction arrives in a later update.')).toBeVisible()
+  // A blank icon has no text at all, so the real redaction panel (Chunk 22) has
+  // nothing to show here — only the still-stubbed template card is checked.
+  await expect(page.getByTestId('redaction-panel')).toHaveCount(0)
 
   await page.getByTestId('stub-template').click()
   await expect(page.getByText('Template mapping arrives in a later update.')).toBeVisible()
