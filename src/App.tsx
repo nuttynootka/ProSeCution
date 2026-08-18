@@ -10,6 +10,7 @@ import { DeadlinesScreen } from './screens/DeadlinesScreen'
 import { DocumentDetailScreen } from './screens/DocumentDetailScreen'
 import { DocumentReviewScreen } from './screens/DocumentReviewScreen'
 import { DocumentsScreen } from './screens/DocumentsScreen'
+import { FillFormScreen } from './screens/FillFormScreen'
 import { IntakeScreen } from './screens/IntakeScreen'
 import { TemplateStudioScreen } from './screens/TemplateStudioScreen'
 import { VaultScreen } from './screens/VaultScreen'
@@ -46,6 +47,7 @@ export function App() {
             <Route path="/cases/:caseId/documents/:documentId/review" element={<DocumentReviewScreen />} />
             <Route path="/cases/:caseId/documents/:documentId" element={<DocumentDetailScreen />} />
             <Route path="/templates/:templateId" element={<TemplateStudioScreen />} />
+            <Route path="/cases/:caseId/templates/:templateId/fill" element={<FillFormScreen />} />
             <Route path="*" element={<Navigate to={START_PATH} replace />} />
           </Routes>
         </div>

@@ -25,6 +25,11 @@ export type {
   SingleLineField,
   TemplateField,
 } from './types'
+export { KNOWN_GLOBAL_KEYS, resolveGlobalKey } from './caseDataResolver'
+export type { CaseData } from './caseDataResolver'
+export { fillTemplate, wrapText } from './PdfFillService'
+export type { FillFieldValues } from './PdfFillService'
+export { pdfFilename, triggerPdfDownload } from './download'
 
 /** App-wide repository instances, wired to the app's real database and vault. */
 export const pdfTemplateRepository = new PdfTemplateRepository(db, vault)

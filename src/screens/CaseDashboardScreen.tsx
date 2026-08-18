@@ -14,6 +14,7 @@ import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import { countDeadlinesNeedingAttention, deadlineRepository } from '../deadlines'
 import { LogServiceDateCard } from '../deadlines/LogServiceDateCard'
 import { documentRepository } from '../documents'
+import { FillFormCard } from '../pdf/FillFormCard'
 import styles from './CaseDashboardScreen.module.css'
 
 const STAGE_DESCRIPTIONS: Record<LitigationStage, string> = {
@@ -173,6 +174,7 @@ export function CaseDashboardScreen() {
         </div>
 
         <LogServiceDateCard caseId={caseRecord.id} onCreated={handleDeadlinesCreated} />
+        <FillFormCard caseId={caseRecord.id} />
 
         <div className={styles.timelineLabel}>Case timeline</div>
 
