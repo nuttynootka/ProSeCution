@@ -21,7 +21,21 @@ async function findAsset(pattern) {
 }
 
 let css = await findAsset(/\.css$/)
-const js = await findAsset(/\.js$/)
+let js = await findAsset(/\.js$/)
+
+// pdf-lib's minified output contains a literal U+FFFD (replacement character) —
+// legitimate source, used to detect failed UTF-16 decodes when reading PDF strings
+// — but the Artifact publishing pipeline rejects any HTML containing a raw U+FFFD
+// byte outright. Every occurrence is inside a JS string literal (there's no other
+// place a bare U+FFFD could appear in valid minified JS), so swapping the literal
+// character for its `�` escape sequence is behaviorally identical and produces
+// byte-for-byte the same runtime string, just spelled out as source text instead of
+// the raw character.
+const replacementCharCount = (js.match(/�/g) ?? []).length
+if (replacementCharCount > 0) {
+  js = js.split('�').join('\\uFFFD')
+  console.log(`escaped ${replacementCharCount} literal U+FFFD character(s) in the bundled JS`)
+}
 
 // Inline the two self-hosted font files as data URIs so the page has zero external
 // requests, per the Artifact sandbox's strict CSP. Vite's `base: './'` rewrites the
