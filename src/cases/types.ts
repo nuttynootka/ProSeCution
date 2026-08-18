@@ -8,16 +8,23 @@ export const LITIGATION_STAGES = ['pleadings', 'discovery', 'motions', 'trial'] 
 export type LitigationStage = (typeof LITIGATION_STAGES)[number]
 
 /**
- * Deliberately not the blueprint's full `cases` column list (case_number,
- * court_name, judge_name, ...) — those have no producer yet, and the whole-blob
- * encryption scheme means adding them later costs nothing beyond adding the field.
- * Scoped to what exists today, not what might exist eventually.
+ * Deliberately not the blueprint's full `cases` column list (court_name,
+ * judge_name, ...) — those have no producer yet, and the whole-blob encryption
+ * scheme means adding them later costs nothing beyond adding the field. Scoped to
+ * what exists today, not what might exist eventually.
+ *
+ * `caseNumber` is optional, not part of the wizard's captured fields (CaseInput) —
+ * nothing asks for it at creation. Its producer is Chunk 10's document review
+ * screen: extracted from a scanned document and, once confirmed, written back here.
+ * It lives on the case (one case, one number, shared by every document in it), not
+ * on the document that happened to reveal it.
  */
 export interface CaseContent {
   state: string
   county: string
   caseType: string
   currentStage: LitigationStage
+  caseNumber?: string
 }
 
 /**

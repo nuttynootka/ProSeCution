@@ -24,8 +24,8 @@ export function CaptureScreen() {
     if (!caseId) return
     setMode({ step: 'saving' })
     try {
-      await documentRepository.create(caseId, blob, filename)
-      goBackToCase()
+      const doc = await documentRepository.create(caseId, blob, filename)
+      navigate(`/cases/${caseId}/documents/${doc.id}/review`)
     } catch {
       setMode({ step: 'error', message: 'Could not save the document. Please try again.' })
     }

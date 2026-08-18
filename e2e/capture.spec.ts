@@ -16,7 +16,7 @@ async function createCaseAndOpenDashboard(page: Page): Promise<void> {
   await expect(page.getByTestId('screen-case-dashboard')).toBeVisible()
 }
 
-test('importing an image file goes through crop before saving', async ({ page }) => {
+test('importing an image file goes through crop and review before saving', async ({ page }) => {
   await setUpVault(page)
   await createCaseAndOpenDashboard(page)
   await expect(page.getByTestId('stat-documents')).toContainText('0')
@@ -30,6 +30,11 @@ test('importing an image file goes through crop before saving', async ({ page })
   await expect(page.getByTestId('crop-editor')).toBeVisible()
   await page.getByTestId('crop-confirm').click()
 
+  // Crop hands off to the review screen — OCR runs there, not inline in capture.
+  await expect(page.getByTestId('review-screen')).toBeVisible()
+  await expect(page.getByTestId('review-loading')).toBeHidden({ timeout: 30_000 })
+  await page.getByTestId('review-save').click()
+
   // Back on the dashboard: the count is real, and the timeline shows it.
   await expect(page.getByTestId('screen-case-dashboard')).toBeVisible()
   await expect(page.getByTestId('stat-documents')).toContainText('1')
@@ -39,7 +44,7 @@ test('importing an image file goes through crop before saving', async ({ page })
   )
 })
 
-test('importing a non-image file (PDF) skips crop and saves directly', async ({ page }) => {
+test('importing a non-image file (PDF) skips crop, goes straight to review, and skips OCR', async ({ page }) => {
   await setUpVault(page)
   await createCaseAndOpenDashboard(page)
 
@@ -51,13 +56,19 @@ test('importing a non-image file (PDF) skips crop and saves directly', async ({ 
     buffer: Buffer.from('%PDF-1.4 fake pdf content for testing'),
   })
 
-  // No crop step for a PDF — straight back to the dashboard.
+  // No crop step for a PDF, and no OCR — the review screen says so honestly rather
+  // than pretending to have read text out of it.
+  await expect(page.getByTestId('review-screen')).toBeVisible()
+  await expect(page.getByText("Automatic text extraction isn't available for PDFs yet")).toBeVisible()
+  await expect(page.getByTestId('ocr-confidence')).toHaveCount(0)
+  await page.getByTestId('review-save').click()
+
   await expect(page.getByTestId('screen-case-dashboard')).toBeVisible()
   await expect(page.getByTestId('stat-documents')).toContainText('1')
   await expect(page.getByTestId('activity-row').filter({ hasText: 'Document added' })).toContainText('motion.pdf')
 })
 
-test('capturing a photo with the camera goes through crop before saving', async ({ page }) => {
+test('capturing a photo with the camera goes through crop and review before saving', async ({ page }) => {
   await setUpVault(page)
   await createCaseAndOpenDashboard(page)
 
@@ -70,6 +81,10 @@ test('capturing a photo with the camera goes through crop before saving', async 
 
   await expect(page.getByTestId('crop-editor')).toBeVisible()
   await page.getByTestId('crop-confirm').click()
+
+  await expect(page.getByTestId('review-screen')).toBeVisible()
+  await expect(page.getByTestId('review-loading')).toBeHidden({ timeout: 30_000 })
+  await page.getByTestId('review-save').click()
 
   await expect(page.getByTestId('screen-case-dashboard')).toBeVisible()
   await expect(page.getByTestId('stat-documents')).toContainText('1')
@@ -103,7 +118,7 @@ test('cropping to a smaller region actually produces a smaller saved image', asy
   })
 
   await page.getByTestId('crop-confirm').click()
-  await expect(page.getByTestId('screen-case-dashboard')).toBeVisible()
+  await expect(page.getByTestId('review-screen')).toBeVisible()
 
   // Read the stored document's actual size back out of IndexedDB directly (not
   // through an app import — see wizard.spec.ts for why) to confirm the crop was

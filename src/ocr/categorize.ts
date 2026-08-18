@@ -1,5 +1,15 @@
 export type DocumentType = 'Pleading' | 'Motion' | 'Order' | 'Exhibit' | 'Correspondence' | 'Other'
 
+/** Runtime companion to the `DocumentType` union — the review screen's chip picker needs an actual list to render, not just a type. */
+export const DOCUMENT_TYPES: readonly DocumentType[] = [
+  'Pleading',
+  'Motion',
+  'Order',
+  'Exhibit',
+  'Correspondence',
+  'Other',
+]
+
 interface Rule {
   type: DocumentType
   pattern: RegExp

@@ -82,6 +82,11 @@ export function CaseDashboardScreen() {
           <div className={styles.headerTitle}>
             {caseRecord.county}, {caseRecord.state}
           </div>
+          {caseRecord.caseNumber && (
+            <div className={styles.caseNumber} data-testid="case-number-display">
+              {caseRecord.caseNumber}
+            </div>
+          )}
         </div>
       </div>
 

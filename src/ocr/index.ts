@@ -1,4 +1,5 @@
 export { recognizeText } from './OcrService'
 export type { OcrResult } from './OcrService'
-export { categorizeDocument } from './categorize'
+export { categorizeDocument, DOCUMENT_TYPES } from './categorize'
 export type { DocumentType } from './categorize'
+export { extractCaseNumber } from './extractFields'

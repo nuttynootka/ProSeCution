@@ -31,6 +31,13 @@
   color: var(--plcm-heading);
 }
 
+.caseNumber {
+  margin-top: 2px;
+  font: 500 10px/1.2 var(--plcm-font-mono);
+  letter-spacing: 0.04em;
+  color: var(--plcm-text-faint);
+}
+
 .body {
   padding: 6px 18px 20px;
   display: flex;
