@@ -4,12 +4,15 @@ import { caseRepository, partyRepository } from '../cases'
 import { GlassSurface } from '../components/GlassSurface'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import {
+  checkCompliance,
   fieldMappingRepository,
   fillTemplate,
+  loadFillFont,
   pdfFilename,
   pdfTemplateRepository,
   resolveGlobalKey,
   triggerPdfDownload,
+  type ComplianceReport,
   type FieldMapping,
   type FillFieldValues,
   type PdfTemplate,
@@ -40,6 +43,7 @@ export function FillFormScreen() {
   const [mappings, setMappings] = useState<FieldMapping[]>([])
   const [values, setValues] = useState<FillFieldValues>({})
   const [pageNum, setPageNum] = useState(1)
+  const [compliance, setCompliance] = useState<ComplianceReport | null>(null)
 
   useEffect(() => {
     if (!caseId || !templateId) return
@@ -86,12 +90,15 @@ export function FillFormScreen() {
   const handleGenerate = async () => {
     if (!templateId) return
     setPhase('generating')
+    setCompliance(null)
     try {
       const blob = await pdfTemplateRepository.getFileBlob(templateId)
       if (!blob) throw new Error('template file missing')
       const bytes = new Uint8Array(await blob.arrayBuffer())
-      const filled = await fillTemplate(bytes, mappings, values)
+      const fontBytes = await loadFillFont()
+      const filled = await fillTemplate(bytes, mappings, values, fontBytes)
       triggerPdfDownload(pdfFilename(template?.name ?? 'form'), filled)
+      setCompliance(await checkCompliance(filled, mappings))
       setPhase('ready')
     } catch {
       setPhase('generate-error')
@@ -164,6 +171,21 @@ export function FillFormScreen() {
           <div className={styles.errorBanner} role="alert" data-testid="fill-form-generate-error">
             Could not generate the PDF. Please try again.
           </div>
+        )}
+
+        {compliance && (
+          <GlassSurface style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }} data-testid="fill-form-compliance">
+            <div className={styles.fieldLabel}>E-FILING CHECKS (NOT FULL PDF/A VALIDATION)</div>
+            {compliance.checks.map((check) => (
+              <div key={check.id} className={styles.complianceRow} data-testid="compliance-check" data-passed={check.passed}>
+                <span className={check.passed ? styles.complianceOk : styles.complianceFail}>{check.passed ? '✓' : '✗'}</span>
+                <div>
+                  <div className={styles.complianceLabel}>{check.label}</div>
+                  <div className={styles.complianceDetail}>{check.detail}</div>
+                </div>
+              </div>
+            ))}
+          </GlassSurface>
         )}
       </div>
 

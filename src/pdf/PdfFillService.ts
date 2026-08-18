@@ -1,5 +1,26 @@
-import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
+import { PDFDocument, type PDFFont, type PDFPage } from 'pdf-lib'
 import type { FieldMapping, TemplateField } from './types'
+
+let cachedFontBytes: Uint8Array | null = null
+
+/**
+ * Loads the real embeddable font `fillTemplate` draws with — IBM Plex Mono,
+ * self-hosted already for the UI (Chunk 2), reused here rather than a second font
+ * asset. This matters for more than consistency: pdf-lib's `StandardFonts` helper
+ * (the obvious first choice, used until this chunk) references one of the 14 PDF
+ * "standard" fonts by *name* and does not embed actual glyph data — a PDF/A
+ * conformance requirement (Chunk 20's compliance checker) is that every font used is
+ * actually embedded. Fetched and cached separately from `fillTemplate` itself so
+ * that function stays pure and unit-testable (font bytes passed in, not fetched
+ * inside it) — `fetch`/`import.meta.env.BASE_URL` are real-browser-only concerns.
+ */
+export async function loadFillFont(): Promise<Uint8Array> {
+  if (cachedFontBytes) return cachedFontBytes
+  const res = await fetch(`${import.meta.env.BASE_URL}fonts/ibm-plex-mono-400.woff2`)
+  cachedFontBytes = new Uint8Array(await res.arrayBuffer())
+  return cachedFontBytes
+}
 
 /** Resolved values, keyed by `TemplateField.fieldId` — this module doesn't know about case data or global keys, only what text goes in which box. */
 export interface FillFieldValues {
@@ -30,9 +51,11 @@ export async function fillTemplate(
   templateBytes: Uint8Array,
   mappings: FieldMapping[],
   values: FillFieldValues,
+  fontBytes: Uint8Array,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(templateBytes)
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  pdfDoc.registerFontkit(fontkit)
+  const font = await pdfDoc.embedFont(fontBytes)
   const pages = pdfDoc.getPages()
 
   for (const mapping of mappings) {

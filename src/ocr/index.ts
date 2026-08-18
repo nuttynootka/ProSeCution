@@ -1,4 +1,4 @@
-export { recognizeText } from './OcrService'
+export { recognizeText, recognizeToSearchablePdf } from './OcrService'
 export type { OcrResult } from './OcrService'
 export { categorizeDocument, DOCUMENT_TYPES } from './categorize'
 export type { DocumentType } from './categorize'

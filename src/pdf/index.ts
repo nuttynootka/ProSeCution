@@ -27,9 +27,11 @@ export type {
 } from './types'
 export { KNOWN_GLOBAL_KEYS, resolveGlobalKey } from './caseDataResolver'
 export type { CaseData } from './caseDataResolver'
-export { fillTemplate, wrapText } from './PdfFillService'
+export { fillTemplate, loadFillFont, wrapText } from './PdfFillService'
 export type { FillFieldValues } from './PdfFillService'
 export { pdfFilename, triggerPdfDownload } from './download'
+export { checkCompliance, STAMP_ZONE_HEIGHT_PT } from './compliance'
+export type { ComplianceCheck, ComplianceReport } from './compliance'
 
 /** App-wide repository instances, wired to the app's real database and vault. */
 export const pdfTemplateRepository = new PdfTemplateRepository(db, vault)

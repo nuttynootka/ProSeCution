@@ -8,6 +8,7 @@ import {
   loadPdf,
   moveCorner,
   pdfTemplateRepository,
+  STAMP_ZONE_HEIGHT_PT,
   translateRect,
   type Corner,
   type FractionalRect,
@@ -282,6 +283,15 @@ export function TemplateStudioScreen() {
           data-testid="template-stage"
         >
           <canvas ref={canvasRef} className={styles.canvas} data-testid="template-canvas" />
+          {pageNum === 1 && pageSize && (
+            <div
+              className={styles.stampZone}
+              style={{ height: `${Math.min(1, STAMP_ZONE_HEIGHT_PT / pageSize.height) * 100}%` }}
+              data-testid="stamp-zone-guide"
+            >
+              <span className={styles.stampZoneLabel}>RESERVED FOR COURT STAMP</span>
+            </div>
+          )}
           {fields.map((field) => {
             const rect = fractionalOf(field)
             const isSelected = field.fieldId === selectedId

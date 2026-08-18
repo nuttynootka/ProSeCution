@@ -54,3 +54,29 @@ export async function recognizeText(image: Blob | string): Promise<OcrResult> {
     await worker.terminate()
   }
 }
+
+/**
+ * Runs OCR and returns a real, positioned, invisible-text-over-image searchable
+ * PDF — Tesseract's own PDF renderer (the same one behind its `-c tessedit_
+ * create_pdf=1` CLI flag) does the actual per-word placement, not hand-rolled
+ * coordinate math here. This is the blueprint's "embedded OCR layer": a scanned
+ * document becomes text-searchable/selectable the way an e-filing system expects,
+ * without discarding the original page image underneath.
+ */
+export async function recognizeToSearchablePdf(image: Blob | string, pdfTitle = 'Scanned document'): Promise<Uint8Array> {
+  const worker = await createWorker('eng', 1, {
+    corePath: `${ASSET_BASE}/tesseract-core-simd-lstm.js`,
+    workerPath: `${ASSET_BASE}/worker.min.js`,
+    langPath: ASSET_BASE,
+    gzip: true,
+    workerBlobURL: false,
+  })
+
+  try {
+    const { data } = await worker.recognize(image, { pdfTitle }, { pdf: true, text: false })
+    if (!data.pdf) throw new Error('Tesseract did not produce a PDF output')
+    return new Uint8Array(data.pdf)
+  } finally {
+    await worker.terminate()
+  }
+}

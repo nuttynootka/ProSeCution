@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { GlassSurface } from '../components/GlassSurface'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import { documentRepository, type Document } from '../documents'
-import { DOCUMENT_TYPES, type DocumentType } from '../ocr'
+import { DOCUMENT_TYPES, recognizeToSearchablePdf, type DocumentType } from '../ocr'
+import { pdfFilename, triggerPdfDownload } from '../pdf'
 import { ChipGroup } from '../wizard/ChipGroup'
 import { SectionLabel } from '../wizard/Field'
 import { PrimaryButton } from '../wizard/PrimaryButton'
@@ -30,6 +31,8 @@ export function DocumentDetailScreen() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!documentId) return
@@ -76,6 +79,22 @@ export function DocumentDetailScreen() {
     } catch {
       setSaveError('Could not save. Please try again.')
       setPhase('ready')
+    }
+  }
+
+  const handleExportSearchablePdf = async () => {
+    if (!documentId || !doc) return
+    setExportError(null)
+    setExporting(true)
+    try {
+      const blob = await documentRepository.getFileBlob(documentId)
+      if (!blob) throw new Error('missing file')
+      const pdfBytes = await recognizeToSearchablePdf(blob, doc.originalFilename)
+      triggerPdfDownload(pdfFilename(doc.originalFilename), pdfBytes)
+    } catch {
+      setExportError('Could not create a searchable PDF. Please try again.')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -158,6 +177,25 @@ export function DocumentDetailScreen() {
         <PrimaryButton disabled={phase === 'saving'} onClick={() => void handleSave()} data-testid="document-detail-save">
           {phase === 'saving' ? 'Saving…' : 'Save changes'}
         </PrimaryButton>
+
+        {imageUrl && (
+          <>
+            {exportError && (
+              <div className={styles.errorBanner} role="alert" data-testid="document-detail-export-error">
+                {exportError}
+              </div>
+            )}
+            <button
+              type="button"
+              className={styles.exportButton}
+              onClick={() => void handleExportSearchablePdf()}
+              disabled={exporting}
+              data-testid="document-detail-export-pdf"
+            >
+              {exporting ? 'Creating searchable PDF…' : 'Export as searchable PDF'}
+            </button>
+          </>
+        )}
 
         <button type="button" className={styles.deleteButton} onClick={() => void handleDelete()} data-testid="document-detail-delete">
           {confirmingDelete ? 'Tap again to permanently delete' : 'Delete document'}

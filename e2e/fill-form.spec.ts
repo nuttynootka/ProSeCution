@@ -1,27 +1,28 @@
-import { inflateSync } from 'node:zlib'
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 import { setUpVault } from './helpers/vault'
 
-/** Same technique as the Vitest-level verification in src/pdf/PdfFillService.test.ts — pdf-lib writes standard-font text as hex strings inside (usually FlateDecode-compressed) content streams, so inflating every stream and searching for the hex form is a real, independent check of what's actually in the downloaded file, not just that the download happened. */
-function pdfContainsText(bytes: Buffer, text: string): boolean {
-  const raw = bytes.toString('latin1')
-  const hex = Buffer.from(text, 'utf-8').toString('hex').toUpperCase()
-  let idx = 0
-  while (true) {
-    const streamStart = raw.indexOf('stream', idx)
-    if (streamStart === -1) return false
-    const dataStart = streamStart + 7
-    const streamEnd = raw.indexOf('endstream', dataStart)
-    if (streamEnd === -1) return false
-    try {
-      const inflated = inflateSync(bytes.subarray(dataStart, streamEnd)).toString('latin1').toUpperCase()
-      if (inflated.includes(hex)) return true
-    } catch {
-      // not a FlateDecode stream — skip
-    }
-    idx = streamEnd + 9
+/**
+ * Real text extraction, not a hex-search guess at pdf-lib's encoding: the font
+ * fillTemplate embeds (Chunk 20, IBM Plex Mono via fontkit) comes out as a Type0/CID
+ * composite font, whose content stream encodes each glyph as a per-font glyph ID —
+ * not the character's own code point — so a earlier version of this check that
+ * hex-searched the raw content stream for the drawn text stopped finding anything
+ * once the font changed, even though the text was genuinely there. pdf.js's own
+ * text-extraction (its Node-targeted "legacy" build) does the real decoding a PDF
+ * reader actually needs.
+ */
+async function extractPdfText(bytes: Buffer): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise
+  const texts: string[] = []
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i)
+    const content = await page.getTextContent()
+    texts.push(content.items.map((item) => ('str' in item ? item.str : '')).join(' '))
   }
+  await doc.destroy()
+  return texts.join('\n')
 }
 
 async function createCaseAndOpenDashboard(page: Page): Promise<void> {
@@ -95,7 +96,7 @@ test('generating a filled form downloads a real PDF containing the actual entere
   const path = await download.path()
   const bytes = await readFile(path!)
   expect(bytes.subarray(0, 4).toString('latin1')).toBe('%PDF')
-  expect(pdfContainsText(bytes, 'Maria Hartley-Overridden')).toBe(true)
+  expect(await extractPdfText(bytes)).toContain('Maria Hartley-Overridden')
 })
 
 test('a template with no mapped fields is honest about it, but still generates a downloadable copy', async ({ page }) => {

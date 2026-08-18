@@ -1,8 +1,15 @@
-import { inflateSync } from 'node:zlib'
-import { PDFDocument, StandardFonts, type PDFFont } from 'pdf-lib'
+import { readFileSync } from 'node:fs'
+import fontkit from '@pdf-lib/fontkit'
+import { PDFDocument, type PDFFont } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
 import { fillTemplate, wrapText } from './PdfFillService'
 import type { FieldMapping, TemplateField } from './types'
+
+// The real self-hosted font fillTemplate embeds in production (see PdfFillService's
+// loadFillFont) — using it here too, rather than a synthetic StandardFonts
+// substitute, means these tests exercise the exact font-embedding path Chunk 20
+// added it for, not a stand-in that happens to share an API.
+const FONT_BYTES = new Uint8Array(readFileSync('public/fonts/ibm-plex-mono-400.woff2'))
 
 async function makeTemplateBytes(pageCount = 1): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
@@ -11,32 +18,32 @@ async function makeTemplateBytes(pageCount = 1): Promise<Uint8Array> {
 }
 
 /**
- * Verifies drawn text content for real, not just "no exception was thrown": pdf-lib
- * writes standard-font text operators as hex strings inside (typically
- * FlateDecode-compressed) content streams — e.g. "Hello" becomes `<48656C6C6F>` —
- * so inflating every stream and searching for the hex-encoded text is a genuine,
- * independent check that the text actually landed in the output PDF's content, not
- * an assumption that drawText() must have worked because it didn't throw.
+ * Verifies drawn text content for real, not just "no exception was thrown" — and
+ * genuinely, not by guessing at pdf-lib's internal encoding. A fontkit-embedded
+ * TrueType font (what `loadFillFont` uses, see PdfFillService) always comes out as a
+ * Type0/CID composite font, whose content stream encodes each glyph as an arbitrary
+ * per-font glyph ID, not the character's own code point — an early version of this
+ * test tried to hex-search the raw text in the (inflated) content stream and it
+ * legitimately found nothing, because that's not what's actually written there.
+ * pdf.js's own text-extraction (`page.getTextContent()`, via its Node-targeted
+ * "legacy" build — the same library already used elsewhere in this app for
+ * rendering, Chunk 17) does the real glyph-ID-to-Unicode decoding a PDF reader
+ * actually needs, so using it here is independent, correct verification instead of
+ * reverse-engineering pdf-lib's encoding by hand.
  */
-function pdfContainsText(bytes: Uint8Array, text: string): boolean {
-  const buf = Buffer.from(bytes)
-  const raw = buf.toString('latin1')
-  const hex = Buffer.from(text, 'utf-8').toString('hex').toUpperCase()
-  let idx = 0
-  while (true) {
-    const streamStart = raw.indexOf('stream', idx)
-    if (streamStart === -1) return false
-    const dataStart = streamStart + 7
-    const streamEnd = raw.indexOf('endstream', dataStart)
-    if (streamEnd === -1) return false
-    try {
-      const inflated = inflateSync(buf.subarray(dataStart, streamEnd)).toString('latin1').toUpperCase()
-      if (inflated.includes(hex)) return true
-    } catch {
-      // Not a FlateDecode stream (or not a real content stream) — skip it.
-    }
-    idx = streamEnd + 9
-  }
+async function extractPdfText(bytes: Uint8Array, pageNum?: number): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const doc = await pdfjsLib.getDocument({ data: bytes.slice() }).promise
+  const pageNums = pageNum ? [pageNum] : Array.from({ length: doc.numPages }, (_, i) => i + 1)
+  const texts = await Promise.all(
+    pageNums.map(async (n) => {
+      const page = await doc.getPage(n)
+      const content = await page.getTextContent()
+      return content.items.map((item) => ('str' in item ? item.str : '')).join(' ')
+    }),
+  )
+  await doc.destroy()
+  return texts.join('\n')
 }
 
 const singleLineField: TemplateField = {
@@ -59,33 +66,42 @@ describe('fillTemplate', () => {
     const template = await makeTemplateBytes(1)
     const mapping: FieldMapping = { id: 'm1', templateId: 't1', pageNum: 1, fields: [singleLineField], createdAt: 0, updatedAt: 0 }
 
-    const result = await fillTemplate(template, [mapping], { name: 'Maria Hartley' })
+    const result = await fillTemplate(template, [mapping], { name: 'Maria Hartley' }, FONT_BYTES)
 
-    expect(pdfContainsText(result, 'Maria Hartley')).toBe(true)
+    expect(await extractPdfText(result)).toContain('Maria Hartley')
   })
 
-  it('word-wraps a multi-line field across several drawn lines', async () => {
+  it('word-wraps a multi-line field across several drawn lines, truncated at maxLines', async () => {
     const template = await makeTemplateBytes(1)
     const mapping: FieldMapping = { id: 'm1', templateId: 't1', pageNum: 1, fields: [multiLineField], createdAt: 0, updatedAt: 0 }
+    // At this field's width/lineHeight, wrapText (verified directly below) breaks
+    // this into 5 lines — "The defendant" / "breached the" / "agreement on multiple"
+    // / "occasions during the" / "relevant period". multiLineField.maxLines is 3, so
+    // only the first three should actually make it into the drawn PDF.
     const longText = 'The defendant breached the agreement on multiple occasions during the relevant period'
 
-    const result = await fillTemplate(template, [mapping], { facts: longText })
+    const result = await fillTemplate(template, [mapping], { facts: longText }, FONT_BYTES)
+    const extracted = await extractPdfText(result)
 
-    // Each individual word should be findable — proof the text was actually broken
-    // into multiple drawn lines (a single un-wrapped Tj would still contain each
-    // word too, so this alone isn't the strongest check — see the length-limited
-    // wrapText unit tests below for the wrapping logic itself).
-    expect(pdfContainsText(result, 'defendant')).toBe(true)
-    expect(pdfContainsText(result, 'relevant')).toBe(true)
+    // First three lines' words are there...
+    expect(extracted).toContain('defendant')
+    expect(extracted).toContain('breached')
+    expect(extracted).toContain('multiple')
+    // ...but content past maxLines is genuinely dropped, not merely wrapped further —
+    // an earlier version of this test asserted the opposite by mistake and only
+    // caught the real maxLines-truncation behavior once verified against actual
+    // extracted text instead of an assumption.
+    expect(extracted).not.toContain('relevant')
+    expect(extracted).not.toContain('period')
   })
 
   it('skips a field with no resolved value — draws nothing for it', async () => {
     const template = await makeTemplateBytes(1)
     const mapping: FieldMapping = { id: 'm1', templateId: 't1', pageNum: 1, fields: [singleLineField], createdAt: 0, updatedAt: 0 }
 
-    const result = await fillTemplate(template, [mapping], {})
+    const result = await fillTemplate(template, [mapping], {}, FONT_BYTES)
 
-    expect(pdfContainsText(result, 'Maria Hartley')).toBe(false)
+    expect(await extractPdfText(result)).not.toContain('Maria Hartley')
   })
 
   it('draws page-2 fields on page 2, not page 1', async () => {
@@ -97,17 +113,21 @@ describe('fillTemplate', () => {
       { id: 'm2', templateId: 't1', pageNum: 2, fields: [page2Field], createdAt: 0, updatedAt: 0 },
     ]
 
-    const result = await fillTemplate(template, mappings, { p1field: 'PAGE-ONE-MARKER', p2field: 'PAGE-TWO-MARKER' })
+    const result = await fillTemplate(template, mappings, { p1field: 'PAGE-ONE-MARKER', p2field: 'PAGE-TWO-MARKER' }, FONT_BYTES)
     const reloaded = await PDFDocument.load(result)
 
     expect(reloaded.getPageCount()).toBe(2)
-    expect(pdfContainsText(result, 'PAGE-ONE-MARKER')).toBe(true)
-    expect(pdfContainsText(result, 'PAGE-TWO-MARKER')).toBe(true)
+    const page1Text = await extractPdfText(result, 1)
+    const page2Text = await extractPdfText(result, 2)
+    expect(page1Text).toContain('PAGE-ONE-MARKER')
+    expect(page1Text).not.toContain('PAGE-TWO-MARKER')
+    expect(page2Text).toContain('PAGE-TWO-MARKER')
+    expect(page2Text).not.toContain('PAGE-ONE-MARKER')
   })
 
   it('preserves the page count and produces a re-loadable PDF', async () => {
     const template = await makeTemplateBytes(3)
-    const result = await fillTemplate(template, [], {})
+    const result = await fillTemplate(template, [], {}, FONT_BYTES)
     const reloaded = await PDFDocument.load(result)
     expect(reloaded.getPageCount()).toBe(3)
   })
@@ -116,7 +136,7 @@ describe('fillTemplate', () => {
     const template = await makeTemplateBytes(1)
     const mapping: FieldMapping = { id: 'm1', templateId: 't1', pageNum: 5, fields: [singleLineField], createdAt: 0, updatedAt: 0 }
 
-    await expect(fillTemplate(template, [mapping], { name: 'x' })).resolves.toBeInstanceOf(Uint8Array)
+    await expect(fillTemplate(template, [mapping], { name: 'x' }, FONT_BYTES)).resolves.toBeInstanceOf(Uint8Array)
   })
 })
 
@@ -126,7 +146,8 @@ describe('wrapText', () => {
   async function getFont(): Promise<PDFFont> {
     if (!font) {
       const doc = await PDFDocument.create()
-      font = await doc.embedFont(StandardFonts.Helvetica)
+      doc.registerFontkit(fontkit)
+      font = await doc.embedFont(FONT_BYTES)
     }
     return font
   }
