@@ -176,6 +176,8 @@
   background: var(--plcm-glass-fill);
   border: 1px solid var(--plcm-glass-border);
   box-shadow: var(--plcm-glass-inset);
+  display: block;
+  text-decoration: none;
 }
 
 .statCardAccent {

@@ -7,7 +7,9 @@ import { CaseDashboardScreen } from './screens/CaseDashboardScreen'
 import { CasesScreen } from './screens/CasesScreen'
 import { CounselScreen } from './screens/CounselScreen'
 import { DeadlinesScreen } from './screens/DeadlinesScreen'
+import { DocumentDetailScreen } from './screens/DocumentDetailScreen'
 import { DocumentReviewScreen } from './screens/DocumentReviewScreen'
+import { DocumentsScreen } from './screens/DocumentsScreen'
 import { IntakeScreen } from './screens/IntakeScreen'
 import { VaultScreen } from './screens/VaultScreen'
 import { CaptureScreen } from './intake/CaptureScreen'
@@ -39,7 +41,9 @@ export function App() {
             </Route>
             <Route path="/cases/new" element={<NewCaseWizard />} />
             <Route path="/cases/:caseId/intake" element={<CaptureScreen />} />
+            <Route path="/cases/:caseId/documents" element={<DocumentsScreen />} />
             <Route path="/cases/:caseId/documents/:documentId/review" element={<DocumentReviewScreen />} />
+            <Route path="/cases/:caseId/documents/:documentId" element={<DocumentDetailScreen />} />
             <Route path="*" element={<Navigate to={START_PATH} replace />} />
           </Routes>
         </div>

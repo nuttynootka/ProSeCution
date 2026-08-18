@@ -141,14 +141,14 @@ export function CaseDashboardScreen() {
               IN 14 DAYS
             </div>
           </div>
-          <div className={styles.statCard} data-testid="stat-documents">
+          <Link to={`/cases/${caseId}/documents`} className={styles.statCard} data-testid="stat-documents">
             <div className={styles.statValue}>{documentCount}</div>
             <div className={styles.statLabel}>
               DOCUMENTS
               <br />
               INDEXED
             </div>
-          </div>
+          </Link>
           <div className={`${styles.statCard} ${styles.statCardAccent}`}>
             <div className={styles.statValue}>0</div>
             <div className={`${styles.statLabel} ${styles.statLabelAccent}`}>
