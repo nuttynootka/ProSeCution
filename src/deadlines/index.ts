@@ -9,6 +9,8 @@ export type { Deadline, DeadlineContent, DeadlineStatus } from './types'
 export { buildIcsCalendar, icsFilename, triggerIcsDownload } from './ics'
 export { countDeadlinesNeedingAttention, summarizeDeadlineReminders } from './reminders'
 export type { DeadlineReminderSummary } from './reminders'
+export { daysUntil, formatDeadlineUrgency, urgencyTone } from './urgency'
+export type { UrgencyTone } from './urgency'
 
 /** App-wide repository instance, wired to the app's real database and vault. */
 export const deadlineRepository = new DeadlineRepository(db, vault)

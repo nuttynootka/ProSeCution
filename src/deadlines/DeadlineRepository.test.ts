@@ -106,6 +106,30 @@ describe('listForCase', () => {
   })
 })
 
+describe('listAll', () => {
+  it('returns deadlines from every case, soonest-due first', async () => {
+    const { cases, deadlines } = await harness()
+    const federalCase = await cases.create({ state: 'federal', county: 'N.D. Cal.', caseType: 'Civil' })
+    const caCase = await cases.create({ state: 'CA', county: 'Los Angeles', caseType: 'Civil' })
+    const [federalDeadline] = await deadlines.createFromTrigger(
+      federalCase.id,
+      'service_of_summons',
+      Date.UTC(2026, 5, 1),
+    )
+    const [caDeadline] = await deadlines.createFromTrigger(caCase.id, 'service_of_summons', Date.UTC(2026, 0, 1))
+
+    const all = await deadlines.listAll()
+
+    expect(all.map((d) => d.id)).toEqual([caDeadline.id, federalDeadline.id])
+    expect(caDeadline.dueDate).toBeLessThan(federalDeadline.dueDate)
+  })
+
+  it('returns an empty array when there are no deadlines anywhere', async () => {
+    const { deadlines } = await harness()
+    expect(await deadlines.listAll()).toEqual([])
+  })
+})
+
 describe('setStatus', () => {
   it('marks a deadline completed and persists it', async () => {
     const { cases, deadlines } = await harness()

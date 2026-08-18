@@ -3,7 +3,13 @@ import { US_STATES } from '../constants'
 import { ChipGroup } from '../ChipGroup'
 import { SectionLabel, TextInput } from '../Field'
 
-const STATE_OPTIONS = US_STATES.map((s) => ({ value: s.code, label: s.code }))
+// 'federal' first and separately from the 50 states + DC: a case's jurisdiction is
+// either a specific state or federal court, never both, and the deadline engine
+// (Chunk 12) keys its federal rules on exactly this literal value.
+const STATE_OPTIONS = [
+  { value: 'federal', label: 'Federal' },
+  ...US_STATES.map((s) => ({ value: s.code, label: s.code })),
+]
 
 interface JurisdictionStepProps {
   state: string | null

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { caseRepository, type Case } from '../cases'
+import { caseRepository, formatJurisdiction, type Case } from '../cases'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import styles from './CasesScreen.module.css'
 
@@ -37,7 +37,7 @@ export function CasesScreen() {
               >
                 <div className={styles.caseType}>{c.caseType}</div>
                 <div className={styles.caseLocation}>
-                  {c.county}, {c.state}
+                  {c.county}, {formatJurisdiction(c.state)}
                 </div>
               </button>
             ))}

@@ -8,5 +8,6 @@ export const partyRepository = new PartyRepository(db, vault)
 
 export { CaseRepository, CaseNotFoundError } from './CaseRepository'
 export { PartyRepository, PartyNotFoundError } from './PartyRepository'
+export { formatJurisdiction } from './jurisdiction'
 export { LITIGATION_STAGES } from './types'
 export type { Case, CaseContent, CaseInput, LitigationStage, Party, PartyContent, PartyRole } from './types'

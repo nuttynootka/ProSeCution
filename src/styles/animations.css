@@ -1,7 +1,7 @@
 /*
  * Keyframes carried over verbatim from the mockup, added as each chunk's
- * components need them. Still missing: scanProgress, travel, breathe, shimmer, eq —
- * those belong to later chunks (Intake, Deadlines, Vault, Co-Counsel).
+ * components need them. Still missing: scanProgress, breathe, shimmer, eq — those
+ * belong to later chunks (Intake, Vault, Co-Counsel).
  */
 
 /* Drives the posture card's rotating conic-gradient border (Chunk 6). Custom
@@ -63,6 +63,16 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* The glowing dot that travels down the deadlines timeline's rail (Chunk 16). */
+@keyframes travel {
+  0% {
+    top: -80px;
+  }
+  100% {
+    top: 100%;
   }
 }
 

@@ -20,6 +20,7 @@ export type LitigationStage = (typeof LITIGATION_STAGES)[number]
  * on the document that happened to reveal it.
  */
 export interface CaseContent {
+  /** A 2-letter state code, or the literal 'federal' — the wizard's jurisdiction chip picker (Chunk 5/16) offers both, and this is also the exact key the deadline engine (Chunk 12) looks its rules up by. Display it through `formatJurisdiction`, not raw, so 'federal' doesn't show up lowercase next to uppercase state codes. */
   state: string
   county: string
   caseType: string

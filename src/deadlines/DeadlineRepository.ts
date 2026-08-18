@@ -60,6 +60,13 @@ export class DeadlineRepository {
     return hydrated.sort((a, b) => a.dueDate - b.dueDate)
   }
 
+  /** Every deadline across every case, soonest due first — the Deadlines tab is a cross-case view, unlike everything else in this app that's scoped to one case at a time. */
+  async listAll(): Promise<Deadline[]> {
+    const records = await this.#db.deadlines.toArray()
+    const hydrated = await Promise.all(records.map((r) => this.#hydrate(r)))
+    return hydrated.sort((a, b) => a.dueDate - b.dueDate)
+  }
+
   async setStatus(id: string, status: DeadlineStatus): Promise<Deadline> {
     const record = await this.#db.deadlines.get(id)
     if (!record) throw new DeadlineNotFoundError(id)

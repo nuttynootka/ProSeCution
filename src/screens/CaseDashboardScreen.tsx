@@ -4,6 +4,7 @@ import { buildActivityTimeline, type ActivityEntry } from '../cases/activity'
 import { placeholderPostureScore, STAGE_LABELS, stageIndex } from '../cases/posture'
 import {
   caseRepository,
+  formatJurisdiction,
   LITIGATION_STAGES,
   partyRepository,
   type Case,
@@ -11,6 +12,7 @@ import {
 } from '../cases'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import { countDeadlinesNeedingAttention, deadlineRepository } from '../deadlines'
+import { LogServiceDateCard } from '../deadlines/LogServiceDateCard'
 import { documentRepository } from '../documents'
 import styles from './CaseDashboardScreen.module.css'
 
@@ -49,6 +51,13 @@ export function CaseDashboardScreen() {
     }
   }, [caseId])
 
+  const handleDeadlinesCreated = () => {
+    if (!caseId) return
+    deadlineRepository
+      .listForCase(caseId)
+      .then((deadlines) => setDeadlinesNeedingAttention(countDeadlinesNeedingAttention(deadlines, Date.now())))
+  }
+
   if (caseRecord === undefined) return null
 
   if (caseRecord === null) {
@@ -84,7 +93,7 @@ export function CaseDashboardScreen() {
         <div>
           <div className={styles.headerKicker}>{caseRecord.caseType.toUpperCase()}</div>
           <div className={styles.headerTitle}>
-            {caseRecord.county}, {caseRecord.state}
+            {caseRecord.county}, {formatJurisdiction(caseRecord.state)}
           </div>
           {caseRecord.caseNumber && (
             <div className={styles.caseNumber} data-testid="case-number-display">
@@ -162,6 +171,8 @@ export function CaseDashboardScreen() {
             </div>
           </div>
         </div>
+
+        <LogServiceDateCard caseId={caseRecord.id} onCreated={handleDeadlinesCreated} />
 
         <div className={styles.timelineLabel}>Case timeline</div>
 
