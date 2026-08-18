@@ -18,6 +18,15 @@ export interface DeadlineContent {
   trigger: TriggerEvent
   triggerDate: number
   status: DeadlineStatus
+  /**
+   * Set together, only by Chunk 23's proof-of-service flow: `relatedDeadlineId`
+   * points at the original deadline this one extends (mirrors the blueprint's
+   * `related_service_deadline_id`/`is_service_deadline` columns), so a caller can
+   * explain *why* a second deadline exists for what's really the same underlying
+   * obligation, instead of two unrelated-looking entries on the same timeline.
+   */
+  isServiceDeadline?: boolean
+  relatedDeadlineId?: string
 }
 
 export interface Deadline extends DeadlineContent {

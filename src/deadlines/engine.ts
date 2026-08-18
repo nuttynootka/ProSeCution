@@ -11,7 +11,17 @@ function toUtcMidnight(date: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
 }
 
-/** Mirrors the blueprint's `TriggerEvent` enum (10.3 DeadlineCalculationEngine.kt). */
+/**
+ * Mirrors the blueprint's `TriggerEvent` enum (10.3 DeadlineCalculationEngine.kt).
+ * `mail_service_extension` is not one of those and has no entry in
+ * `JURISDICTION_RULES` below — `calculateDeadlines` never produces it. It exists
+ * purely to label a deadline built by a different path entirely: Chunk 23's proof-
+ * of-service flow, which derives a new due date directly from an existing deadline
+ * plus a mail-service rule (Fed. R. Civ. P. 6(d) and its state analogues), rather
+ * than from a trigger date and a seeded rule table. Giving it its own trigger value
+ * keeps `Deadline.trigger` an honest description of *why* a deadline exists, instead
+ * of reusing an unrelated trigger just because the type union demanded some value.
+ */
 export type TriggerEvent =
   | 'service_of_summons'
   | 'filing_of_complaint'
@@ -19,6 +29,7 @@ export type TriggerEvent =
   | 'filing_of_motion'
   | 'court_order'
   | 'discovery_request'
+  | 'mail_service_extension'
 
 export interface CalculatedDeadline {
   title: string

@@ -1,0 +1,47 @@
+.prompt {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--plcm-radius-lg);
+  background: linear-gradient(160deg, rgba(124, 58, 237, 0.16), rgba(37, 99, 235, 0.08));
+  border: 1px dashed rgba(196, 181, 253, 0.35);
+  text-align: left;
+  cursor: pointer;
+}
+
+.promptTitle {
+  font: 600 13.5px/1.35 var(--plcm-font-sans);
+  color: var(--plcm-heading);
+}
+
+.promptNote {
+  margin-top: 4px;
+  font: 400 11.5px/1.5 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.note {
+  margin: 0;
+  font: 400 12.5px/1.5 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.actions > * {
+  flex: 1;
+}
+
+.resultText {
+  margin: 0;
+  font: 500 12.5px/1.5 var(--plcm-font-sans);
+  color: var(--plcm-text);
+}
+
+.resultTextWarn {
+  margin: 0;
+  font: 500 12.5px/1.5 var(--plcm-font-sans);
+  color: #fca5a5;
+}

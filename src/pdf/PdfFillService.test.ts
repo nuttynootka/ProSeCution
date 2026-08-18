@@ -125,6 +125,38 @@ describe('fillTemplate', () => {
     expect(page2Text).not.toContain('PAGE-ONE-MARKER')
   })
 
+  it('draws a period correctly in one field even when an earlier field introduced a colon first', async () => {
+    // Regression test for a real bug found while building Chunk 23's certificate
+    // generator: this exact font, embedded via fontkit, silently mis-shapes a
+    // character in one page.drawText() call if a DIFFERENT character was first
+    // introduced to the font in an earlier, separate drawText() call — confirmed by
+    // rendering the actual output, not just re-extracting it (a colon drawn in one
+    // field, followed by a period drawn in a later field, rendered as a completely
+    // different letter). Fixed by primeFontShaping() in fillTemplate. This test
+    // reproduces the minimal trigger — a colon-bearing field before a period-bearing
+    // one — to make sure it stays fixed.
+    const template = await makeTemplateBytes(1)
+    const colonField: TemplateField = { ...singleLineField, fieldId: 'colonField' }
+    const periodField: TemplateField = { ...singleLineField, fieldId: 'periodField', boundingBox: { ...singleLineField.boundingBox, top: 200 } }
+    const mapping: FieldMapping = {
+      id: 'm1',
+      templateId: 't1',
+      pageNum: 1,
+      fields: [colonField, periodField],
+      createdAt: 0,
+      updatedAt: 0,
+    }
+
+    const result = await fillTemplate(
+      template,
+      [mapping],
+      { colonField: 'Case No: 24CV1234', periodField: 'R. Cordova' },
+      FONT_BYTES,
+    )
+
+    expect(await extractPdfText(result)).toContain('R. Cordova')
+  })
+
   it('preserves the page count and produces a re-loadable PDF', async () => {
     const template = await makeTemplateBytes(3)
     const result = await fillTemplate(template, [], {}, FONT_BYTES)

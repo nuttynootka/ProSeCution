@@ -56,6 +56,7 @@ export async function fillTemplate(
   const pdfDoc = await PDFDocument.load(templateBytes)
   pdfDoc.registerFontkit(fontkit)
   const font = await pdfDoc.embedFont(fontBytes)
+  primeFontShaping(font, Object.values(values))
   const pages = pdfDoc.getPages()
 
   for (const mapping of mappings) {
@@ -91,6 +92,32 @@ function drawField(page: PDFPage, font: PDFFont, field: TemplateField, value: st
     page.drawText(line, { x: left + HORIZONTAL_INSET, y, size: fontSize, font })
     y -= field.lineHeight
   }
+}
+
+/**
+ * Works around a real bug empirically found in this exact font + fontkit +
+ * pdf-lib combination: `pdfDoc.embedFont()`'s glyph shaping (`font.layout()`,
+ * called internally by both `drawText` and `widthOfTextAtSize`) is only reliably
+ * correct for a given character the *first* time that character is shaped after
+ * embedding. When two DIFFERENT `page.drawText()` calls each introduce a
+ * character the font hasn't shaped yet — confirmed reproducible with as little as
+ * drawing `':'` in one call, then `'a.b'` in a later, separate call — the second
+ * call's period silently comes out as the wrong glyph (visually rendering as a
+ * different letter entirely, not just a wrong Unicode label on copy/paste).
+ * Combining everything into one drawText call doesn't have the bug, but this app
+ * draws many separate calls (one per line, one per field) by necessity.
+ *
+ * The fix that empirically eliminates it: shape the *complete* set of text this
+ * document will ever draw once, up front, via a single `widthOfTextAtSize` call
+ * (chosen over `encodeText` only because it doesn't require also drawing
+ * anything) — before any real `drawText` call happens. Whatever internal
+ * per-character shaping cache fontkit builds ends up correctly populated for
+ * every character used, and every later real draw call reads consistently
+ * correct results from it. Call this immediately after `embedFont`, with every
+ * string the caller intends to draw with that font.
+ */
+export function primeFontShaping(font: PDFFont, texts: string[]): void {
+  font.widthOfTextAtSize(texts.join(' '), 1)
 }
 
 /** Greedy word wrap using the font's own measured width — a fixed characters-per-line guess would be wrong for any non-monospace font (Helvetica here) and every font size this scales with. */

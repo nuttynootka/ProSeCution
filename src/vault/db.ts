@@ -109,6 +109,19 @@ export interface StoredFieldMappingRecord {
 }
 
 /**
+ * Same envelope pattern as everything else content-shaped. Not indexed by anything
+ * beyond caseId/createdAt for the same reason deadlines aren't indexed by dueDate:
+ * nothing queries proof-of-service records except "all of them for this case."
+ */
+export interface StoredProofOfServiceRecord {
+  id: string
+  caseId: string
+  createdAt: number
+  updatedAt: number
+  dataEnc: string
+}
+
+/**
  * Schema versions are additive and permanent: once a `.version(n)` block ships, it
  * is never edited, only superseded by a new `.version(n + 1)` with an `.upgrade()`
  * migration. This is the versioned-migration discipline the blueprint calls for —
@@ -122,8 +135,10 @@ export interface StoredFieldMappingRecord {
  * v3: documents, indexed the same way as parties (id, caseId, createdAt).
  * v4: deadlines, indexed the same way — dueDate isn't a plain column
  * (see StoredDeadlineRecord), so there's nothing more to index than caseId/createdAt.
- * v5 (this chunk): pdfTemplates (id, createdAt — not case-scoped) and fieldMappings
+ * v5: pdfTemplates (id, createdAt — not case-scoped) and fieldMappings
  * (id, templateId, createdAt).
+ * v6 (this chunk): proofOfService, indexed the same way as deadlines/documents/parties
+ * (id, caseId, createdAt).
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
@@ -133,6 +148,7 @@ export class PlcmDatabase extends Dexie {
   deadlines!: EntityTable<StoredDeadlineRecord, 'id'>
   pdfTemplates!: EntityTable<StoredPdfTemplateRecord, 'id'>
   fieldMappings!: EntityTable<StoredFieldMappingRecord, 'id'>
+  proofOfService!: EntityTable<StoredProofOfServiceRecord, 'id'>
 
   constructor(name = 'plcm') {
     super(name)
@@ -165,6 +181,16 @@ export class PlcmDatabase extends Dexie {
       deadlines: 'id, caseId, createdAt',
       pdfTemplates: 'id, createdAt',
       fieldMappings: 'id, templateId, createdAt',
+    })
+    this.version(6).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
     })
   }
 }

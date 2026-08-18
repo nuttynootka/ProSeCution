@@ -47,6 +47,29 @@ export class DeadlineRepository {
     return created
   }
 
+  /**
+   * Persists a deadline whose content was already fully computed by the caller,
+   * bypassing `calculateDeadlines` entirely. `createFromTrigger` is right for "run
+   * the seeded rule engine off a trigger date"; this is for the other legitimate way
+   * a deadline gets created in this app — Chunk 23's proof-of-service flow, which
+   * derives a due date from an *existing* deadline plus a mail-service extension, not
+   * from a trigger date. Kept on this repository rather than duplicated elsewhere so
+   * every deadline, however it was computed, goes through the same encryption and
+   * hydration path.
+   */
+  async createDirect(caseId: string, content: DeadlineContent): Promise<Deadline> {
+    const now = monotonicNow()
+    const record: StoredDeadlineRecord = {
+      id: crypto.randomUUID(),
+      caseId,
+      createdAt: now,
+      updatedAt: now,
+      dataEnc: await encryptContent(this.#vault, content),
+    }
+    await this.#db.deadlines.put(record)
+    return this.#hydrate(record, content)
+  }
+
   async get(id: string): Promise<Deadline | undefined> {
     const record = await this.#db.deadlines.get(id)
     if (!record) return undefined
