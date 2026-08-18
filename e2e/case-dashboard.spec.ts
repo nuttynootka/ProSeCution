@@ -26,6 +26,7 @@ test('opening a case from the list shows its real dashboard', async ({ page }) =
   // zero everywhere real data doesn't exist yet.
   await expect(page.getByTestId('posture-score')).toHaveText('20')
   await expect(page.getByText('Pleadings', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('stat-deadlines')).toContainText('0')
 
   // Case creation and both parties, most recent first.
   const rows = page.getByTestId('activity-row')

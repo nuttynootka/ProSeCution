@@ -10,6 +10,7 @@ import {
   type LitigationStage,
 } from '../cases'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
+import { countDeadlinesNeedingAttention, deadlineRepository } from '../deadlines'
 import { documentRepository } from '../documents'
 import styles from './CaseDashboardScreen.module.css'
 
@@ -26,6 +27,7 @@ export function CaseDashboardScreen() {
   const [caseRecord, setCaseRecord] = useState<Case | null | undefined>(undefined)
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [documentCount, setDocumentCount] = useState(0)
+  const [deadlinesNeedingAttention, setDeadlinesNeedingAttention] = useState(0)
 
   useEffect(() => {
     if (!caseId) return
@@ -34,10 +36,12 @@ export function CaseDashboardScreen() {
       caseRepository.get(caseId),
       partyRepository.listForCase(caseId),
       documentRepository.listForCase(caseId),
-    ]).then(([foundCase, parties, documents]) => {
+      deadlineRepository.listForCase(caseId),
+    ]).then(([foundCase, parties, documents, deadlines]) => {
       if (cancelled) return
       setCaseRecord(foundCase ?? null)
       setDocumentCount(documents.length)
+      setDeadlinesNeedingAttention(countDeadlinesNeedingAttention(deadlines, Date.now()))
       if (foundCase) setActivity(buildActivityTimeline(foundCase, parties, documents))
     })
     return () => {
@@ -133,8 +137,8 @@ export function CaseDashboardScreen() {
         </div>
 
         <div className={styles.statRow}>
-          <div className={styles.statCard}>
-            <div className={styles.statValue}>0</div>
+          <div className={styles.statCard} data-testid="stat-deadlines">
+            <div className={styles.statValue}>{deadlinesNeedingAttention}</div>
             <div className={styles.statLabel}>
               DEADLINES
               <br />
