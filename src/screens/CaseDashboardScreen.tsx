@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { buildActivityTimeline, type ActivityEntry } from '../cases/activity'
 import { placeholderPostureScore, STAGE_LABELS, stageIndex } from '../cases/posture'
 import {
@@ -10,6 +10,7 @@ import {
   type LitigationStage,
 } from '../cases'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
+import { documentRepository } from '../documents'
 import styles from './CaseDashboardScreen.module.css'
 
 const STAGE_DESCRIPTIONS: Record<LitigationStage, string> = {
@@ -24,17 +25,21 @@ export function CaseDashboardScreen() {
   const navigate = useNavigate()
   const [caseRecord, setCaseRecord] = useState<Case | null | undefined>(undefined)
   const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const [documentCount, setDocumentCount] = useState(0)
 
   useEffect(() => {
     if (!caseId) return
     let cancelled = false
-    Promise.all([caseRepository.get(caseId), partyRepository.listForCase(caseId)]).then(
-      ([foundCase, parties]) => {
-        if (cancelled) return
-        setCaseRecord(foundCase ?? null)
-        if (foundCase) setActivity(buildActivityTimeline(foundCase, parties))
-      },
-    )
+    Promise.all([
+      caseRepository.get(caseId),
+      partyRepository.listForCase(caseId),
+      documentRepository.listForCase(caseId),
+    ]).then(([foundCase, parties, documents]) => {
+      if (cancelled) return
+      setCaseRecord(foundCase ?? null)
+      setDocumentCount(documents.length)
+      if (foundCase) setActivity(buildActivityTimeline(foundCase, parties, documents))
+    })
     return () => {
       cancelled = true
     }
@@ -131,8 +136,8 @@ export function CaseDashboardScreen() {
               IN 14 DAYS
             </div>
           </div>
-          <div className={styles.statCard}>
-            <div className={styles.statValue}>0</div>
+          <div className={styles.statCard} data-testid="stat-documents">
+            <div className={styles.statValue}>{documentCount}</div>
             <div className={styles.statLabel}>
               DOCUMENTS
               <br />
@@ -164,6 +169,18 @@ export function CaseDashboardScreen() {
           </div>
         ))}
       </div>
+
+      <Link to={`/cases/${caseId}/intake`} className={styles.fab} aria-label="Scan or import document" data-testid="scan-document-fab">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path
+            d="M3 7V4.5A1.5 1.5 0 0 1 4.5 3H7M13 3h2.5A1.5 1.5 0 0 1 17 4.5V7M17 13v2.5a1.5 1.5 0 0 1-1.5 1.5H13M7 17H4.5A1.5 1.5 0 0 1 3 15.5V13"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.6" />
+        </svg>
+      </Link>
     </div>
   )
 }

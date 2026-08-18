@@ -239,3 +239,24 @@
   font: 400 11.5px/1.5 var(--plcm-font-sans);
   color: var(--plcm-text-dim);
 }
+
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(var(--plcm-nav-height) + 16px + env(safe-area-inset-bottom, 0px));
+  z-index: 4;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f4f2ff;
+  background:
+    linear-gradient(155deg, rgba(124, 58, 237, 0.55), rgba(37, 99, 235, 0.4)),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(196, 181, 253, 0.4);
+  box-shadow:
+    8px 14px 28px -8px rgba(76, 29, 149, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}

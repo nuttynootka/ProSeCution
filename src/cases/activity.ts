@@ -1,3 +1,4 @@
+import type { Document } from '../documents/types'
 import type { Case, Party, PartyRole } from './types'
 
 export interface ActivityEntry {
@@ -15,11 +16,16 @@ const ROLE_LABELS: Record<PartyRole, string> = {
 }
 
 /**
- * Built entirely from data that's actually real today — case creation and party
- * additions. Nothing here is fabricated to look like a fuller timeline; documents,
- * deadlines, and drafts join this once Chunks 7–47 exist to produce them.
+ * Built entirely from data that's actually real today — case creation, party
+ * additions, and (as of Chunk 8) documents added. Nothing here is fabricated to look
+ * like a fuller timeline; deadlines and drafts join this once Chunks 12–16 and 43
+ * exist to produce them.
  */
-export function buildActivityTimeline(caseRecord: Case, parties: readonly Party[]): ActivityEntry[] {
+export function buildActivityTimeline(
+  caseRecord: Case,
+  parties: readonly Party[],
+  documents: readonly Document[] = [],
+): ActivityEntry[] {
   const entries: ActivityEntry[] = [
     {
       id: `case-created-${caseRecord.id}`,
@@ -34,6 +40,13 @@ export function buildActivityTimeline(caseRecord: Case, parties: readonly Party[
       date: party.createdAt,
       meta: party.name,
       hue: '#a78bfa',
+    })),
+    ...documents.map((doc) => ({
+      id: `document-added-${doc.id}`,
+      title: 'Document added',
+      date: doc.createdAt,
+      meta: doc.originalFilename,
+      hue: '#34d399',
     })),
   ]
 

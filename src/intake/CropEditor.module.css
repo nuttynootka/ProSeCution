@@ -1,0 +1,101 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--plcm-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.imageWrap {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  touch-action: none;
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 220px);
+  user-select: none;
+}
+
+.overlay {
+  position: absolute;
+  border: 2px solid var(--plcm-purple-light);
+  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.45);
+  touch-action: none;
+}
+
+.handle {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  margin: -14px;
+  border-radius: 50%;
+  background: rgba(167, 139, 250, 0.25);
+  border: 2px solid var(--plcm-purple-light);
+  touch-action: none;
+}
+
+.handle_topLeft {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+
+.handle_topRight {
+  right: 0;
+  top: 0;
+  cursor: nesw-resize;
+}
+
+.handle_bottomLeft {
+  left: 0;
+  bottom: 0;
+  cursor: nesw-resize;
+}
+
+.handle_bottomRight {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.footer {
+  display: flex;
+  gap: 10px;
+  padding: 16px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+}
+
+.primaryButton {
+  flex: 1;
+  padding: 13px;
+  border-radius: var(--plcm-radius-md);
+  text-align: center;
+  background: linear-gradient(120deg, var(--plcm-purple-deep), var(--plcm-blue));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font: 700 13px/1 var(--plcm-font-sans);
+}
+
+.secondaryButton {
+  flex: 1;
+  padding: 13px;
+  border-radius: var(--plcm-radius-md);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--plcm-glass-border);
+  color: var(--plcm-text);
+  font: 700 13px/1 var(--plcm-font-sans);
+}

@@ -7,9 +7,13 @@ import { defineConfig, devices } from '@playwright/test'
 // to Playwright's own managed browser.
 const BUNDLED_CHROMIUM =
   process.env.CHROMIUM_PATH ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
-const launchOptions = existsSync(BUNDLED_CHROMIUM)
-  ? { executablePath: BUNDLED_CHROMIUM }
-  : {}
+const launchOptions = {
+  ...(existsSync(BUNDLED_CHROMIUM) ? { executablePath: BUNDLED_CHROMIUM } : {}),
+  // Fake camera device: Chunk 8's camera-capture tests need getUserMedia to resolve
+  // to a real, decodable synthetic video feed (a moving test pattern), not an actual
+  // webcam — confirmed this produces genuine frames before relying on it.
+  args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+}
 
 // Pixel 7 emulation keeps verification honest: this app is Android-only, and the
 // mockup is drawn at phone width.
@@ -27,6 +31,7 @@ export default defineConfig({
       use: {
         ...devices['Pixel 7'],
         launchOptions,
+        permissions: ['camera'],
       },
     },
   ],

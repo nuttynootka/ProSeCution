@@ -9,6 +9,7 @@ import { CounselScreen } from './screens/CounselScreen'
 import { DeadlinesScreen } from './screens/DeadlinesScreen'
 import { IntakeScreen } from './screens/IntakeScreen'
 import { VaultScreen } from './screens/VaultScreen'
+import { CaptureScreen } from './intake/CaptureScreen'
 import { NewCaseWizard } from './wizard/NewCaseWizard'
 
 /**
@@ -36,6 +37,7 @@ export function App() {
               <Route path="/vault" element={<VaultScreen />} />
             </Route>
             <Route path="/cases/new" element={<NewCaseWizard />} />
+            <Route path="/cases/:caseId/intake" element={<CaptureScreen />} />
             <Route path="*" element={<Navigate to={START_PATH} replace />} />
           </Routes>
         </div>

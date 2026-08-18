@@ -1,0 +1,104 @@
+.root {
+  min-height: 100%;
+}
+
+.header {
+  padding: 14px 18px 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--plcm-glass-border);
+  color: var(--plcm-text-dim);
+  flex: none;
+}
+
+.kicker {
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: var(--plcm-text-faint);
+}
+
+.title {
+  margin-top: 3px;
+  font: 700 17px/1.2 var(--plcm-font-sans);
+  color: var(--plcm-heading);
+}
+
+.body {
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: rise-in 0.35s ease both;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--plcm-radius-lg);
+  text-align: left;
+  cursor: pointer;
+  background: var(--plcm-glass-fill);
+  border: 1px solid var(--plcm-glass-border);
+  box-shadow: var(--plcm-glass-inset);
+}
+
+.option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.optionIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(140deg, var(--plcm-purple-deep), var(--plcm-blue));
+  color: #fff;
+}
+
+.optionTitle {
+  font: 600 14px/1.3 var(--plcm-font-sans);
+  color: var(--plcm-heading);
+}
+
+.optionNote {
+  margin-top: 3px;
+  font: 400 11.5px/1.5 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.errorBanner {
+  padding: 12px 14px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fca5a5;
+  font: 500 12.5px/1.4 var(--plcm-font-sans);
+}
+
+.saving {
+  padding: 12px 14px;
+  font: 500 12.5px/1.4 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
