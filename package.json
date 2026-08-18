@@ -27,6 +27,7 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "fake-indexeddb": "^6.2.5",
+    "node-ical": "^0.27.1",
     "sharp": "^0.33.5",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",

@@ -6,6 +6,7 @@ export type { CalculatedDeadline, TriggerEvent } from './engine'
 export { federalHolidays, isFederalHolidayOrWeekend, isWeekend } from './holidays'
 export { DeadlineNotFoundError, DeadlineRepository } from './DeadlineRepository'
 export type { Deadline, DeadlineContent, DeadlineStatus } from './types'
+export { buildIcsCalendar, icsFilename, triggerIcsDownload } from './ics'
 
 /** App-wide repository instance, wired to the app's real database and vault. */
 export const deadlineRepository = new DeadlineRepository(db, vault)
