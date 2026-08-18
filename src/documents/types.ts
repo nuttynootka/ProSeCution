@@ -1,16 +1,20 @@
+import type { DocumentType } from '../ocr/categorize'
+
 /**
- * Just enough to store and retrieve a file. Deliberately not the blueprint's full
- * `documents` column list (document_type, ocr_text, ocr_confidence,
- * pii_redaction_report_uri, extracted_fields, is_opposition, ...) — those belong to
- * the chunks that actually produce them: OCR (Chunk 9), redaction (Chunk 21),
- * opposing-filing analysis (Chunk 44). Adding an encrypted-blob field with no
- * producer or consumer yet would be exactly the speculative scope this project has
- * been avoiding since Chunk 4.
+ * Deliberately not the blueprint's full `documents` column list —
+ * pii_redaction_report_uri, extracted_fields, is_opposition, etc. still have no
+ * producer (redaction is Chunk 21, opposing-filing analysis is Chunk 44) and aren't
+ * added speculatively. `ocrText`/`ocrConfidence`/`documentType` are new as of Chunk
+ * 9's OCR pipeline — optional, since nothing in this chunk wires an automatic
+ * trigger yet (Chunk 10's job), so every document has them absent until then.
  */
 export interface DocumentContent {
   originalFilename: string
   mimeType: string
   sizeBytes: number
+  ocrText?: string
+  ocrConfidence?: number
+  documentType?: DocumentType
 }
 
 export interface Document extends DocumentContent {

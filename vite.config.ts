@@ -35,10 +35,14 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Case files are large; the WASM payloads in later chunks (OCR, Argon2) push
-        // past Workbox's default 2 MiB precache ceiling.
+        // Case files are large; the WASM payloads (OCR, and Argon2 in an earlier
+        // chunk) push past Workbox's default 2 MiB precache ceiling.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2,wasm}'],
+        // `gz` here is the OCR language data (public/ocr/eng.traineddata.gz) — Chunk
+        // 9's self-hosted Tesseract assets. Without it in the precache manifest, OCR
+        // would silently depend on network access the first time it's used, which
+        // defeats the point of self-hosting it in an offline-first app.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,wasm,gz}'],
       },
       devOptions: { enabled: false },
     }),

@@ -72,6 +72,30 @@ export class DocumentRepository {
     return new Blob([plaintext.slice()], { type: content.mimeType })
   }
 
+  /**
+   * Persists OCR output onto an existing document. Separate from `create` because
+   * OCR (Chunk 9's pipeline) runs after the file is already saved — capture and
+   * recognition are two different operations with two different failure modes, and
+   * a document should exist and be retrievable even if OCR hasn't run yet or fails.
+   */
+  async updateOcrResult(
+    id: string,
+    result: Pick<DocumentContent, 'ocrText' | 'ocrConfidence' | 'documentType'>,
+  ): Promise<Document> {
+    const record = await this.#db.documents.get(id)
+    if (!record) throw new DocumentNotFoundError(id)
+
+    const current = await decryptContent<DocumentContent>(this.#vault, record.dataEnc)
+    const updated: DocumentContent = { ...current, ...result }
+    const updatedAt = monotonicNow()
+
+    await this.#db.documents.update(id, {
+      dataEnc: await encryptContent(this.#vault, updated),
+      updatedAt,
+    })
+    return { ...updated, id, caseId: record.caseId, createdAt: record.createdAt, updatedAt }
+  }
+
   async delete(id: string): Promise<void> {
     await this.#db.documents.delete(id)
   }
@@ -85,5 +109,12 @@ export class DocumentRepository {
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     }
+  }
+}
+
+export class DocumentNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Document not found: ${id}`)
+    this.name = 'DocumentNotFoundError'
   }
 }

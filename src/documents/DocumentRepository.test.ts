@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { VaultLockedError } from '../vault/VaultService'
+import { DocumentNotFoundError } from './DocumentRepository'
 import { freshUnlockedStore } from './testHarness'
 
 let openDbs: { delete: () => Promise<void> }[] = []
@@ -125,6 +126,69 @@ describe('listForCase', () => {
     const { cases, documents } = await harness()
     const c = await cases.create({ state: 'CA', county: 'LA', caseType: 'Civil' })
     expect(await documents.listForCase(c.id)).toEqual([])
+  })
+})
+
+describe('updateOcrResult', () => {
+  it('leaves a freshly created document without OCR fields', async () => {
+    const { cases, documents } = await harness()
+    const c = await cases.create({ state: 'CA', county: 'LA', caseType: 'Civil' })
+    const doc = await documents.create(c.id, textBlob('x'), 'x.txt')
+
+    expect(doc.ocrText).toBeUndefined()
+    expect(doc.ocrConfidence).toBeUndefined()
+    expect(doc.documentType).toBeUndefined()
+  })
+
+  it('persists OCR text, confidence, and document type', async () => {
+    const { cases, documents } = await harness()
+    const c = await cases.create({ state: 'CA', county: 'LA', caseType: 'Civil' })
+    const doc = await documents.create(c.id, textBlob('x'), 'motion.jpg')
+
+    const updated = await documents.updateOcrResult(doc.id, {
+      ocrText: 'NOTICE OF MOTION AND MOTION TO DISMISS',
+      ocrConfidence: 94,
+      documentType: 'Motion',
+    })
+
+    expect(updated.ocrText).toBe('NOTICE OF MOTION AND MOTION TO DISMISS')
+    expect(updated.ocrConfidence).toBe(94)
+    expect(updated.documentType).toBe('Motion')
+    // Everything from create() is preserved, not overwritten.
+    expect(updated.originalFilename).toBe('motion.jpg')
+  })
+
+  it('persists — a fresh get() sees the OCR result too', async () => {
+    const { cases, documents } = await harness()
+    const c = await cases.create({ state: 'CA', county: 'LA', caseType: 'Civil' })
+    const doc = await documents.create(c.id, textBlob('x'), 'x.txt')
+
+    await documents.updateOcrResult(doc.id, { ocrText: 'text', ocrConfidence: 80, documentType: 'Other' })
+    const refetched = await documents.get(doc.id)
+
+    expect(refetched?.ocrText).toBe('text')
+  })
+
+  it('stores the OCR text encrypted, same as every other field', async () => {
+    const { db, cases, documents } = await harness()
+    const c = await cases.create({ state: 'CA', county: 'LA', caseType: 'Civil' })
+    const doc = await documents.create(c.id, textBlob('x'), 'x.txt')
+
+    await documents.updateOcrResult(doc.id, {
+      ocrText: 'DISTINCTIVE-OCR-OUTPUT-MARKER',
+      ocrConfidence: 90,
+      documentType: 'Other',
+    })
+
+    const raw = await db.documents.get(doc.id)
+    expect(raw?.dataEnc).not.toContain('DISTINCTIVE-OCR-OUTPUT-MARKER')
+  })
+
+  it('throws DocumentNotFoundError for an unknown id', async () => {
+    const { documents } = await harness()
+    await expect(
+      documents.updateOcrResult('does-not-exist', { ocrText: 'x', ocrConfidence: 1, documentType: 'Other' }),
+    ).rejects.toThrow(DocumentNotFoundError)
   })
 })
 
