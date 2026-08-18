@@ -14,7 +14,19 @@ export interface PdfTemplate extends PdfTemplateContent {
 
 export type FieldType = 'SINGLE_LINE' | 'MULTI_LINE_RULED'
 
-/** Coordinates are in unscaled PDF page points (pdf.js's own viewport units at scale 1), not rendered pixels — Template Studio (Chunk 18) converts to/from screen pixels using whatever scale it's rendering at. */
+/**
+ * Coordinates are in unscaled PDF page points (pdf.js's own viewport units at
+ * scale 1), not rendered pixels — Template Studio (Chunk 18) converts to/from
+ * screen pixels using whatever scale it's rendering at.
+ *
+ * `top` is distance from the *top* of the page, same as pdf.js's own rendered
+ * viewport and every other screen coordinate in this app — NOT PDF's native
+ * coordinate system, which measures from the bottom-left with Y increasing
+ * upward. Chunk 19's AcroForm autofill (via pdf-lib, which does use PDF-native
+ * coordinates) is responsible for that one flip: `pdfY = pageHeight - top - height`.
+ * Doing the flip there, once, at the one place it's actually needed, is simpler than
+ * carrying an unusual bottom-up convention through every tap coordinate here.
+ */
 export interface BoundingBox {
   left: number
   top: number

@@ -16,10 +16,18 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
+export interface PageSize {
+  /** In unscaled PDF page points (pdf.js viewport units at scale 1) — the same unit `TemplateField.boundingBox` is defined in (Chunk 17's types.ts). */
+  width: number
+  height: number
+}
+
 export interface PdfDocumentHandle {
   pageCount: number
   /** Renders one page (1-indexed, matching pdf.js's own convention) into the given canvas at the given CSS-pixel scale. */
   renderPage(pageNum: number, scale: number, canvas: HTMLCanvasElement): Promise<void>
+  /** The page's own size at scale 1 — Template Studio (Chunk 18) needs this to convert between on-screen tap coordinates and the point-based coordinates field mappings are stored in. */
+  getPageSize(pageNum: number): Promise<PageSize>
   /** Releases the document's worker-side resources. Not optional to call — pdf.js keeps a document's data in the worker until this runs. */
   destroy(): void
 }
@@ -39,6 +47,11 @@ export async function loadPdf(data: ArrayBuffer | Uint8Array): Promise<PdfDocume
       canvas.height = viewport.height
 
       await page.render({ canvas, viewport }).promise
+    },
+    async getPageSize(pageNum) {
+      const page = await doc.getPage(pageNum)
+      const { width, height } = page.getViewport({ scale: 1 })
+      return { width, height }
     },
     destroy() {
       void loadingTask.destroy()

@@ -1,0 +1,121 @@
+.header {
+  padding: 20px 18px 4px;
+}
+
+.kicker {
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: var(--plcm-text-faint);
+}
+
+.title {
+  margin-top: 4px;
+  font: 700 21px/1.15 var(--plcm-font-sans);
+  letter-spacing: -0.02em;
+  color: var(--plcm-heading);
+}
+
+.body {
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.errorBanner {
+  padding: 12px 14px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fca5a5;
+  font: 500 12.5px/1.4 var(--plcm-font-sans);
+}
+
+.saving {
+  padding: 12px 14px;
+  font: 500 12.5px/1.4 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.namingCard {
+  padding: 16px;
+  border-radius: var(--plcm-radius-lg);
+  background: var(--plcm-glass-fill);
+  border: 1px solid var(--plcm-glass-border);
+  box-shadow: var(--plcm-glass-inset);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.namingLabel {
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: var(--plcm-text-faint);
+}
+
+.namingActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.namingActions > * {
+  flex: 1;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.templateRow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 15px;
+  border-radius: var(--plcm-radius-md);
+  background: var(--plcm-glass-fill);
+  border: 1px solid var(--plcm-glass-border);
+  box-shadow: var(--plcm-glass-inset);
+  cursor: pointer;
+}
+
+.templateName {
+  font: 600 13.5px/1.3 var(--plcm-font-sans);
+  color: var(--plcm-heading);
+}
+
+.templateMeta {
+  margin-top: 5px;
+  font: 400 11.5px/1.5 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(var(--plcm-nav-height) + 16px + env(safe-area-inset-bottom, 0px));
+  z-index: 4;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f4f2ff;
+  cursor: pointer;
+  background:
+    linear-gradient(155deg, rgba(124, 58, 237, 0.55), rgba(37, 99, 235, 0.4)),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(196, 181, 253, 0.4);
+  box-shadow:
+    8px 14px 28px -8px rgba(76, 29, 149, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.hiddenInput {
+  display: none;
+}

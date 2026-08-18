@@ -3,7 +3,15 @@ import { FieldMappingRepository } from './FieldMappingRepository'
 import { PdfTemplateRepository } from './PdfTemplateRepository'
 
 export { loadPdf } from './PdfService'
-export type { PdfDocumentHandle } from './PdfService'
+export type { PageSize, PdfDocumentHandle } from './PdfService'
+export {
+  boundingBoxToFractional,
+  defaultFieldRect,
+  fractionalToBoundingBox,
+  moveCorner,
+  translateRect,
+} from './fieldMath'
+export type { Corner, FractionalRect } from './fieldMath'
 export { PdfTemplateRepository } from './PdfTemplateRepository'
 export { FieldMappingRepository } from './FieldMappingRepository'
 export type {
