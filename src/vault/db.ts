@@ -78,6 +78,37 @@ export interface StoredDeadlineRecord {
 }
 
 /**
+ * Not case-scoped, unlike everything above — a blank court form (e.g. a fillable
+ * Judicial Council form) is a reusable template, not something that belongs to one
+ * case. Binary storage follows the documents pattern (`fileIv`/`fileCiphertext`),
+ * not the text-field `encryptField` one — a PDF is exactly the kind of large binary
+ * content that pattern exists for.
+ */
+export interface StoredPdfTemplateRecord {
+  id: string
+  createdAt: number
+  updatedAt: number
+  dataEnc: string
+  fileIv: Uint8Array
+  fileCiphertext: Uint8Array
+}
+
+/**
+ * One record per (templateId, pageNum) — `pageNum` isn't a plain column because
+ * Dexie's simple indexes can't express "unique per template+page" without a compound
+ * index, and nothing here queries by page number alone, only by template (then
+ * filters/finds the page in memory, same tradeoff as everything else content-shaped
+ * in this schema).
+ */
+export interface StoredFieldMappingRecord {
+  id: string
+  templateId: string
+  createdAt: number
+  updatedAt: number
+  dataEnc: string
+}
+
+/**
  * Schema versions are additive and permanent: once a `.version(n)` block ships, it
  * is never edited, only superseded by a new `.version(n + 1)` with an `.upgrade()`
  * migration. This is the versioned-migration discipline the blueprint calls for —
@@ -89,8 +120,10 @@ export interface StoredDeadlineRecord {
  * v2: cases and parties, indexed by id (+ caseId for parties) and createdAt for
  * chronological listing.
  * v3: documents, indexed the same way as parties (id, caseId, createdAt).
- * v4 (this chunk): deadlines, indexed the same way — dueDate isn't a plain column
+ * v4: deadlines, indexed the same way — dueDate isn't a plain column
  * (see StoredDeadlineRecord), so there's nothing more to index than caseId/createdAt.
+ * v5 (this chunk): pdfTemplates (id, createdAt — not case-scoped) and fieldMappings
+ * (id, templateId, createdAt).
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
@@ -98,6 +131,8 @@ export class PlcmDatabase extends Dexie {
   parties!: EntityTable<StoredPartyRecord, 'id'>
   documents!: EntityTable<StoredDocumentRecord, 'id'>
   deadlines!: EntityTable<StoredDeadlineRecord, 'id'>
+  pdfTemplates!: EntityTable<StoredPdfTemplateRecord, 'id'>
+  fieldMappings!: EntityTable<StoredFieldMappingRecord, 'id'>
 
   constructor(name = 'plcm') {
     super(name)
@@ -121,6 +156,15 @@ export class PlcmDatabase extends Dexie {
       parties: 'id, caseId, createdAt',
       documents: 'id, caseId, createdAt',
       deadlines: 'id, caseId, createdAt',
+    })
+    this.version(5).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
     })
   }
 }
