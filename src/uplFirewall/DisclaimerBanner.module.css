@@ -1,0 +1,21 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 13px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.28);
+}
+
+.icon {
+  flex: none;
+  color: #fde68a;
+  margin-top: 1px;
+}
+
+.text {
+  margin: 0;
+  font: 500 11px/1.5 var(--plcm-font-sans);
+  color: #fde68a;
+}

@@ -1,0 +1,71 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(8, 6, 16, 0.86);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 360px;
+  padding: 22px 20px;
+  border-radius: var(--plcm-radius-lg);
+  background: var(--plcm-glass-fill);
+  border: 1px solid var(--plcm-glass-border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: rise-in 0.3s ease both;
+}
+
+.kicker {
+  font: 600 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: #fca5a5;
+}
+
+.title {
+  font: 700 15.5px/1.35 var(--plcm-font-sans);
+  color: var(--plcm-heading);
+}
+
+.description {
+  margin: 0;
+  font: 400 12px/1.55 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--plcm-glass-border);
+  cursor: pointer;
+}
+
+.checkboxRow input {
+  margin-top: 2px;
+  flex: none;
+}
+
+.checkboxLabel {
+  font: 500 11.5px/1.5 var(--plcm-font-sans);
+  color: var(--plcm-text);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.actions > * {
+  flex: 1;
+}
