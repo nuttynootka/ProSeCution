@@ -29,7 +29,9 @@ test('creating a case through the wizard end to end', async ({ page }) => {
   await expect(page.getByTestId('topics-scan-cta')).toHaveText(/later update/)
   await page.getByTestId('wizard-continue').click()
 
-  // Step 3 (fee waiver stub): choosing "Yes" doesn't block case creation.
+  // Step 3 (fee waiver, real as of Chunk 24): choosing "Yes" without entering
+  // income yet doesn't block case creation — see e2e/fee-waiver.spec.ts for the
+  // real eligibility computation and persistence.
   await expect(page.getByTestId('wizard-step-3')).toBeVisible()
   await page.getByTestId('fee-waiver-yes').click()
   await page.getByTestId('wizard-create').click()

@@ -19,6 +19,15 @@ export type LitigationStage = (typeof LITIGATION_STAGES)[number]
  * It lives on the case (one case, one number, shared by every document in it), not
  * on the document that happened to reveal it.
  */
+/**
+ * Mirrors `FeeWaiverEligibility` from `../feeWaiver/engine` exactly, but is not
+ * imported from there — `cases` is a foundational module every feature depends on
+ * (deadlines, pdf, service, feeWaiver itself), and nothing else in this file
+ * depends the other way. Duplicating this one small literal union here keeps that
+ * dependency direction intact instead of introducing the first exception to it.
+ */
+export type FeeWaiverStatus = 'eligible' | 'not_eligible' | 'undetermined'
+
 export interface CaseContent {
   /** A 2-letter state code, or the literal 'federal' — the wizard's jurisdiction chip picker (Chunk 5/16) offers both, and this is also the exact key the deadline engine (Chunk 12) looks its rules up by. Display it through `formatJurisdiction`, not raw, so 'federal' doesn't show up lowercase next to uppercase state codes. */
   state: string
@@ -26,6 +35,21 @@ export interface CaseContent {
   caseType: string
   currentStage: LitigationStage
   caseNumber?: string
+  /**
+   * The wizard's Fee Waiver step (Chunk 24) writes all four of these together, or
+   * none of them. Absent means the same thing 'not_requested' would — the user
+   * never ran the eligibility check for this case — kept optional/undefined rather
+   * than a required field defaulted at creation (like `currentStage` is) so adding
+   * it costs nothing beyond this type, the same tradeoff `caseNumber` already makes.
+   * When present, `feeWaiverStatus` holds exactly what `checkFeeWaiverEligibility`
+   * returned, and the other three fields hold the inputs that produced it — so the
+   * result can be explained or recomputed later, not just displayed as an
+   * unexplained badge.
+   */
+  feeWaiverStatus?: FeeWaiverStatus
+  feeWaiverHouseholdSize?: number
+  feeWaiverAnnualIncome?: number
+  feeWaiverReceivesPublicBenefits?: boolean
 }
 
 /**

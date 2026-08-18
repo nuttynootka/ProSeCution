@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { caseRepository, partyRepository } from '../cases'
+import { checkFeeWaiverEligibility } from '../feeWaiver'
 import { PrimaryButton } from './PrimaryButton'
 import { WizardShell } from './WizardShell'
 import { CaseDetailsStep } from './steps/CaseDetailsStep'
@@ -16,9 +17,23 @@ interface WizardData {
   caseType: string | null
   plaintiffName: string
   defendantName: string
+  feeWaiverChoice: 'yes' | 'not_now' | null
+  feeWaiverHouseholdSize: string
+  feeWaiverAnnualIncome: string
+  feeWaiverReceivesPublicBenefits: boolean
 }
 
-const EMPTY: WizardData = { state: null, county: '', caseType: null, plaintiffName: '', defendantName: '' }
+const EMPTY: WizardData = {
+  state: null,
+  county: '',
+  caseType: null,
+  plaintiffName: '',
+  defendantName: '',
+  feeWaiverChoice: null,
+  feeWaiverHouseholdSize: '1',
+  feeWaiverAnnualIncome: '',
+  feeWaiverReceivesPublicBenefits: false,
+}
 
 function canContinue(step: number, data: WizardData): boolean {
   if (step === 0) return data.state !== null && data.county.trim().length > 0
@@ -47,10 +62,32 @@ export function NewCaseWizard() {
     setSubmitError(null)
     setSubmitting(true)
     try {
+      const hasEnteredIncome = data.feeWaiverAnnualIncome.trim() !== ''
+      const wantsFeeWaiverCheck =
+        data.feeWaiverChoice === 'yes' && (hasEnteredIncome || data.feeWaiverReceivesPublicBenefits)
+      const feeWaiverFields = wantsFeeWaiverCheck
+        ? (() => {
+            const householdSize = Math.max(1, Math.floor(Number(data.feeWaiverHouseholdSize)) || 1)
+            const annualIncome = Math.max(0, Number(data.feeWaiverAnnualIncome) || 0)
+            const result = checkFeeWaiverEligibility(data.state!, {
+              householdSize,
+              annualIncome,
+              receivesPublicBenefits: data.feeWaiverReceivesPublicBenefits,
+            })
+            return {
+              feeWaiverStatus: result.eligibility,
+              feeWaiverHouseholdSize: householdSize,
+              feeWaiverAnnualIncome: annualIncome,
+              feeWaiverReceivesPublicBenefits: data.feeWaiverReceivesPublicBenefits,
+            }
+          })()
+        : {}
+
       const created = await caseRepository.create({
         state: data.state,
         county: data.county.trim(),
         caseType: data.caseType,
+        ...feeWaiverFields,
       })
       await partyRepository.create(created.id, { name: data.plaintiffName.trim(), role: 'plaintiff' })
       await partyRepository.create(created.id, { name: data.defendantName.trim(), role: 'defendant' })
@@ -112,7 +149,19 @@ export function NewCaseWizard() {
         />
       )}
       {step === 2 && <TopicsStep />}
-      {step === 3 && <FeeWaiverStep />}
+      {step === 3 && (
+        <FeeWaiverStep
+          state={data.state}
+          choice={data.feeWaiverChoice}
+          householdSize={data.feeWaiverHouseholdSize}
+          annualIncome={data.feeWaiverAnnualIncome}
+          receivesPublicBenefits={data.feeWaiverReceivesPublicBenefits}
+          onChoiceChange={(feeWaiverChoice) => patch({ feeWaiverChoice })}
+          onHouseholdSizeChange={(feeWaiverHouseholdSize) => patch({ feeWaiverHouseholdSize })}
+          onAnnualIncomeChange={(feeWaiverAnnualIncome) => patch({ feeWaiverAnnualIncome })}
+          onReceivesPublicBenefitsChange={(feeWaiverReceivesPublicBenefits) => patch({ feeWaiverReceivesPublicBenefits })}
+        />
+      )}
     </WizardShell>
   )
 }

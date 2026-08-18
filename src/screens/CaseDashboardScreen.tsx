@@ -14,9 +14,23 @@ import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import { countDeadlinesNeedingAttention, deadlineRepository } from '../deadlines'
 import { LogServiceDateCard } from '../deadlines/LogServiceDateCard'
 import { documentRepository } from '../documents'
+import { checkFeeWaiverEligibility, generateFeeWaiverWorksheet } from '../feeWaiver'
 import { FillFormCard } from '../pdf/FillFormCard'
+import { loadFillFont, pdfFilename, triggerPdfDownload } from '../pdf'
 import { LogProofOfServiceCard } from '../service/LogProofOfServiceCard'
 import styles from './CaseDashboardScreen.module.css'
+
+const FEE_WAIVER_BADGE_CLASS: Record<'eligible' | 'not_eligible' | 'undetermined', string> = {
+  eligible: 'feeWaiverEligible',
+  not_eligible: 'feeWaiverNotEligible',
+  undetermined: 'feeWaiverUndetermined',
+}
+
+const FEE_WAIVER_BADGE_LABEL: Record<'eligible' | 'not_eligible' | 'undetermined', string> = {
+  eligible: 'FEE WAIVER: LIKELY ELIGIBLE',
+  not_eligible: 'FEE WAIVER: LIKELY NOT ELIGIBLE',
+  undetermined: 'FEE WAIVER: UNDETERMINED',
+}
 
 const STAGE_DESCRIPTIONS: Record<LitigationStage, string> = {
   pleadings: 'Case filed. Nothing else tracked yet — deadlines, documents and drafts will show up here as they are added.',
@@ -52,6 +66,29 @@ export function CaseDashboardScreen() {
       cancelled = true
     }
   }, [caseId])
+
+  const handleDownloadFeeWaiverWorksheet = async () => {
+    if (!caseRecord || !caseRecord.feeWaiverStatus) return
+    const householdSize = caseRecord.feeWaiverHouseholdSize ?? 1
+    const annualIncome = caseRecord.feeWaiverAnnualIncome ?? 0
+    const receivesPublicBenefits = caseRecord.feeWaiverReceivesPublicBenefits ?? false
+    // Recomputed from the same stored inputs, rather than trusting the stored
+    // status alone — a real, re-derivable result, not just a label round-tripped
+    // through storage.
+    const result = checkFeeWaiverEligibility(caseRecord.state, { householdSize, annualIncome, receivesPublicBenefits })
+    const fontBytes = await loadFillFont()
+    const bytes = await generateFeeWaiverWorksheet(
+      {
+        caseLabel: `${caseRecord.county}, ${formatJurisdiction(caseRecord.state)}`,
+        householdSize,
+        annualIncome,
+        receivesPublicBenefits,
+        result,
+      },
+      fontBytes,
+    )
+    triggerPdfDownload(pdfFilename('Fee Waiver Eligibility Worksheet'), bytes)
+  }
 
   const handleDeadlinesCreated = () => {
     if (!caseId) return
@@ -100,6 +137,15 @@ export function CaseDashboardScreen() {
           {caseRecord.caseNumber && (
             <div className={styles.caseNumber} data-testid="case-number-display">
               {caseRecord.caseNumber}
+            </div>
+          )}
+          {caseRecord.feeWaiverStatus && (
+            <div
+              className={`${styles.feeWaiverBadge} ${styles[FEE_WAIVER_BADGE_CLASS[caseRecord.feeWaiverStatus]]}`}
+              data-testid="fee-waiver-badge"
+              data-status={caseRecord.feeWaiverStatus}
+            >
+              {FEE_WAIVER_BADGE_LABEL[caseRecord.feeWaiverStatus]}
             </div>
           )}
         </div>
@@ -181,6 +227,17 @@ export function CaseDashboardScreen() {
           onLogged={handleDeadlinesCreated}
         />
         <FillFormCard caseId={caseRecord.id} />
+
+        {caseRecord.feeWaiverStatus && (
+          <button
+            type="button"
+            className={styles.feeWaiverDownload}
+            onClick={() => void handleDownloadFeeWaiverWorksheet()}
+            data-testid="fee-waiver-download-worksheet"
+          >
+            Download fee waiver eligibility worksheet
+          </button>
+        )}
 
         <div className={styles.timelineLabel}>Case timeline</div>
 
