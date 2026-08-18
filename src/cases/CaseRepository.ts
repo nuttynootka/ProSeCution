@@ -51,13 +51,21 @@ export class CaseRepository {
     return { ...updated, id, createdAt: record.createdAt, updatedAt }
   }
 
-  /** Deletes the case and everything attached to it — parties, documents — atomically. No orphaned encrypted records of either kind. */
+  /** Deletes the case and everything attached to it — parties, documents, deadlines — atomically. No orphaned encrypted records of any kind. */
   async delete(id: string): Promise<void> {
-    await this.#db.transaction('rw', this.#db.cases, this.#db.parties, this.#db.documents, async () => {
-      await this.#db.parties.where('caseId').equals(id).delete()
-      await this.#db.documents.where('caseId').equals(id).delete()
-      await this.#db.cases.delete(id)
-    })
+    await this.#db.transaction(
+      'rw',
+      this.#db.cases,
+      this.#db.parties,
+      this.#db.documents,
+      this.#db.deadlines,
+      async () => {
+        await this.#db.parties.where('caseId').equals(id).delete()
+        await this.#db.documents.where('caseId').equals(id).delete()
+        await this.#db.deadlines.where('caseId').equals(id).delete()
+        await this.#db.cases.delete(id)
+      },
+    )
   }
 
   /** `content`, if already known (e.g. right after create), skips a redundant decrypt round-trip. */

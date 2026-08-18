@@ -62,6 +62,22 @@ export interface StoredDocumentRecord {
 }
 
 /**
+ * Same envelope pattern as cases/parties/documents. `dueDate` lives inside `dataEnc`
+ * like every other content field, not as a plain column — it's exact-litigation-
+ * timeline information, no less sensitive than a case type or a document filename,
+ * both of which are already encrypted. Listing "soonest first" or "due in the next
+ * 14 days" means decrypting a case's deadlines and sorting/filtering in memory, the
+ * same tradeoff the rest of this schema already makes for anything content-shaped.
+ */
+export interface StoredDeadlineRecord {
+  id: string
+  caseId: string
+  createdAt: number
+  updatedAt: number
+  dataEnc: string
+}
+
+/**
  * Schema versions are additive and permanent: once a `.version(n)` block ships, it
  * is never edited, only superseded by a new `.version(n + 1)` with an `.upgrade()`
  * migration. This is the versioned-migration discipline the blueprint calls for —
@@ -72,13 +88,16 @@ export interface StoredDocumentRecord {
  * v1: vault metadata only.
  * v2: cases and parties, indexed by id (+ caseId for parties) and createdAt for
  * chronological listing.
- * v3 (this chunk): documents, indexed the same way as parties (id, caseId, createdAt).
+ * v3: documents, indexed the same way as parties (id, caseId, createdAt).
+ * v4 (this chunk): deadlines, indexed the same way — dueDate isn't a plain column
+ * (see StoredDeadlineRecord), so there's nothing more to index than caseId/createdAt.
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
   cases!: EntityTable<StoredCaseRecord, 'id'>
   parties!: EntityTable<StoredPartyRecord, 'id'>
   documents!: EntityTable<StoredDocumentRecord, 'id'>
+  deadlines!: EntityTable<StoredDeadlineRecord, 'id'>
 
   constructor(name = 'plcm') {
     super(name)
@@ -95,6 +114,13 @@ export class PlcmDatabase extends Dexie {
       cases: 'id, createdAt',
       parties: 'id, caseId, createdAt',
       documents: 'id, caseId, createdAt',
+    })
+    this.version(4).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
     })
   }
 }
