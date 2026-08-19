@@ -22,7 +22,7 @@ const PII_TYPE_LABEL: Record<PiiMatch['type'], string> = {
 }
 
 type Phase = 'loading' | 'ready' | 'saving' | 'load-error'
-type AgentEState = 'idle' | 'working' | 'no-provider' | 'llm-error' | 'done'
+type AgentEState = 'idle' | 'working' | 'no-provider' | 'llm-error' | 'provider-unavailable' | 'done'
 
 interface Fields {
   documentType: DocumentType
@@ -173,8 +173,8 @@ export function DocumentReviewScreen() {
       model: config?.selectedModel ?? provider.defaultModel,
     })
 
-    if (result.status === 'llm-error') {
-      setAgentEState('llm-error')
+    if (result.status === 'llm-error' || result.status === 'provider-unavailable') {
+      setAgentEState(result.status)
       return
     }
 
@@ -339,7 +339,7 @@ export function DocumentReviewScreen() {
               </GlassSurface>
             )}
 
-            {(ambiguousCandidates.length > 0 || agentEState === 'no-provider' || agentEState === 'llm-error' || agentEState === 'done') && (
+            {(ambiguousCandidates.length > 0 || agentEState === 'no-provider' || agentEState === 'llm-error' || agentEState === 'provider-unavailable' || agentEState === 'done') && (
               <GlassSurface
                 style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}
                 data-testid="agent-e-panel"
@@ -367,6 +367,11 @@ export function DocumentReviewScreen() {
                 {agentEState === 'no-provider' && (
                   <p className={styles.note} data-testid="agent-e-note">
                     Set up an AI provider in Vault settings first to use this.
+                  </p>
+                )}
+                {agentEState === 'provider-unavailable' && (
+                  <p className={styles.note} data-testid="agent-e-note">
+                    Your AI provider has failed several times in a row, so the app has stopped retrying for a minute. Check your API key and model in Vault settings — a wrong key fails every time.
                   </p>
                 )}
                 {agentEState === 'llm-error' && (

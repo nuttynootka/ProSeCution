@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getProviderDef } from '../llm'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getProviderDef, resetLlmCircuits } from '../llm'
 import type { PdfTextItem } from '../pdf'
 import { suggestFieldsFromPage } from './agentC'
 
@@ -18,6 +18,12 @@ function llmResponse(content: string): Response {
 function mockFetch(handler: () => Promise<Response> | Response) {
   vi.stubGlobal('fetch', vi.fn(async () => handler()))
 }
+
+// The circuit breaker behind callLlm is module-level and shared, so a test that
+// fails an LLM call three times would otherwise leave it tripped for the next one.
+beforeEach(() => {
+  resetLlmCircuits()
+})
 
 afterEach(() => {
   vi.unstubAllGlobals()

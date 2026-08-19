@@ -1,8 +1,8 @@
-import { buildLlmRequest, extractLlmReplyText, type LlmProviderDef } from '../llm'
+import { callLlm, type LlmProviderDef } from '../llm'
 import { AGENT_E_REDACTION_ASSIST, renderPromptTemplate } from '../prompts'
 import type { PiiCandidate } from '../redaction'
 
-export type AgentEStatus = 'no-candidates' | 'reviewed' | 'llm-error'
+export type AgentEStatus = 'no-candidates' | 'reviewed' | 'llm-error' | 'provider-unavailable'
 
 export interface AgentEReview {
   candidate: PiiCandidate
@@ -72,22 +72,9 @@ export async function reviewAmbiguousPii(params: AskAgentEParams): Promise<Agent
   const prompt = renderPromptTemplate(AGENT_E_REDACTION_ASSIST.template, {
     candidates: params.candidates.map((c) => ({ id: c.id, text: c.text, context: c.context })),
   })
-  const request = buildLlmRequest(params.provider, params.apiKey, params.model, prompt)
-
-  let response: Response
-  try {
-    response = await fetch(request.url, { method: 'POST', headers: request.headers, body: JSON.stringify(request.body) })
-  } catch {
-    return { status: 'llm-error', reviews: [] }
-  }
-  if (!response.ok) {
-    return { status: 'llm-error', reviews: [] }
-  }
-
-  const json = await response.json()
-  const replyText = extractLlmReplyText(params.provider, json)
+  const { text: replyText, circuitOpen } = await callLlm(params.provider, params.apiKey, params.model, prompt)
   if (!replyText) {
-    return { status: 'llm-error', reviews: [] }
+    return { status: circuitOpen ? 'provider-unavailable' : 'llm-error', reviews: [] }
   }
 
   const byId = parseReviewEntries(replyText)

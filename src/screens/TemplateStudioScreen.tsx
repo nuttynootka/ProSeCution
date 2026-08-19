@@ -25,12 +25,13 @@ import { SectionLabel, TextInput } from '../wizard/Field'
 import { PrimaryButton } from '../wizard/PrimaryButton'
 import styles from './TemplateStudioScreen.module.css'
 
-type SuggestState = 'idle' | 'working' | 'no-provider' | 'no-text' | 'llm-error' | 'done'
+type SuggestState = 'idle' | 'working' | 'no-provider' | 'no-text' | 'llm-error' | 'provider-unavailable' | 'done'
 
 const SUGGEST_NOTE: Record<Exclude<SuggestState, 'idle' | 'working'>, string> = {
   'no-provider': 'Set up an AI provider in Vault settings first to use auto-suggest.',
   'no-text': "No extractable text on this page — it's likely a scanned image. Auto-suggest only works on a PDF's real text layer.",
   'llm-error': "Couldn't get suggestions right now. Check your AI provider settings and try again.",
+  'provider-unavailable': 'Your AI provider has failed several times in a row, so the app has stopped retrying for a minute. Check your API key and model in Vault settings — a wrong key fails every time.',
   done: 'Suggested fields added — review, adjust, or delete them like any other field.',
 }
 
@@ -278,7 +279,7 @@ export function TemplateStudioScreen() {
       model: config?.selectedModel ?? provider.defaultModel,
     })
 
-    if (result.status === 'no-text' || result.status === 'llm-error') {
+    if (result.status === 'no-text' || result.status === 'llm-error' || result.status === 'provider-unavailable') {
       setSuggestState(result.status)
       return
     }

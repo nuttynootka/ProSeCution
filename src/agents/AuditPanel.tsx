@@ -119,6 +119,11 @@ export function AuditPanel({ jurisdiction, caseType, caseLabel }: AuditPanelProp
     <div className={styles.resultStack}>
       <DisclaimerBanner />
 
+      {result.status === 'provider-unavailable' && (
+        <GlassSurface style={{ padding: 16 }} data-testid="audit-status-note">
+          <p className={styles.note}>Your AI provider has failed several times in a row, so the app has stopped retrying for a minute. Check your API key and model in Vault settings — a wrong key fails every time.</p>
+        </GlassSurface>
+      )}
       {result.status === 'llm-error' && (
         <GlassSurface style={{ padding: 16 }} data-testid="audit-status-note">
           <p className={styles.note}>Could not get a response from your configured AI provider. Check your Vault settings and try again.</p>

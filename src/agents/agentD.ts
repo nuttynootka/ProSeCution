@@ -1,5 +1,5 @@
 import { legalSourcesFor } from '../legalSources'
-import { buildLlmRequest, extractLlmReplyText, type LlmProviderDef } from '../llm'
+import { callLlm as callProvider, type LlmProviderDef } from '../llm'
 import {
   DRAFTING_CRITIQUE_PROMPT,
   DRAFTING_FULL_DRAFT_PROMPT,
@@ -10,6 +10,7 @@ import {
 import { findUnverifiedCitations, retrieveLegalChunks, serializeChunksForPrompt, type RetrievedChunk } from './retrieval'
 
 export type AgentDStatus =
+  | 'provider-unavailable'
   | 'no-sources'
   | 'retrieval-failed'
   | 'outline-error'
@@ -49,17 +50,19 @@ const EMPTY_RESULT: Omit<AgentDResult, 'status' | 'unreachableSources'> = {
   uncitedOutlineCitations: [],
 }
 
+/**
+ * Every stage of this pipeline goes through the shared, circuit-broken caller.
+ * `lastCircuitOpen` is module-level rather than threaded through each stage's
+ * return: the pipeline is strictly sequential and fails at the first stage that
+ * can't produce text, so the flag is always read immediately after the call that
+ * set it, never across an interleaved one.
+ */
+let lastCircuitOpen = false
+
 async function callLlm(provider: LlmProviderDef, apiKey: string, model: string, prompt: string): Promise<string | null> {
-  const request = buildLlmRequest(provider, apiKey, model, prompt)
-  let response: Response
-  try {
-    response = await fetch(request.url, { method: 'POST', headers: request.headers, body: JSON.stringify(request.body) })
-  } catch {
-    return null
-  }
-  if (!response.ok) return null
-  const json = await response.json()
-  return extractLlmReplyText(provider, json)
+  const result = await callProvider(provider, apiKey, model, prompt)
+  lastCircuitOpen = result.circuitOpen
+  return result.text
 }
 
 /**
@@ -91,7 +94,7 @@ export async function askAgentD(params: AskAgentDParams): Promise<AgentDResult> 
   const legalCorpus = serializeChunksForPrompt(chunks)
   const outlineText = await generateVerifiedOutline(params, chunks, legalCorpus)
   if (outlineText === null) {
-    return { status: 'outline-error', ...EMPTY_RESULT, unreachableSources }
+    return { status: lastCircuitOpen ? 'provider-unavailable' : 'outline-error', ...EMPTY_RESULT, unreachableSources }
   }
   const stillUncited = findUncitedInOutline(outlineText, chunks)
   if (stillUncited.length > 0) {
@@ -112,13 +115,13 @@ export async function askAgentD(params: AskAgentDParams): Promise<AgentDResult> 
     styleGuideBlock
   const draftText = await callLlm(params.provider, params.apiKey, params.model, draftPrompt)
   if (!draftText) {
-    return { status: 'draft-error', ...EMPTY_RESULT, outlineText, unreachableSources }
+    return { status: lastCircuitOpen ? 'provider-unavailable' : 'draft-error', ...EMPTY_RESULT, outlineText, unreachableSources }
   }
 
   const critiquePrompt = renderPromptTemplate(DRAFTING_CRITIQUE_PROMPT.template, { draft: draftText }) + styleGuideBlock
   const finalText = await callLlm(params.provider, params.apiKey, params.model, critiquePrompt)
   if (!finalText) {
-    return { status: 'critique-error', ...EMPTY_RESULT, outlineText, draftText, unreachableSources }
+    return { status: lastCircuitOpen ? 'provider-unavailable' : 'critique-error', ...EMPTY_RESULT, outlineText, draftText, unreachableSources }
   }
 
   return { status: 'drafted', outlineText, draftText, finalText, uncitedOutlineCitations: [], unreachableSources }

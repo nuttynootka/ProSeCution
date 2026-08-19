@@ -1,8 +1,8 @@
-import { buildLlmRequest, extractLlmReplyText, type LlmProviderDef } from '../llm'
+import { callLlm, type LlmProviderDef } from '../llm'
 import { AGENT_B_OPPOSING_FILING_AUDITOR, renderPromptTemplate } from '../prompts'
 import { retrieveLegalChunks, serializeChunksForPrompt } from './retrieval'
 
-export type AgentBStatus = 'llm-error' | 'parse-error' | 'audited'
+export type AgentBStatus = 'llm-error' | 'parse-error' | 'audited' | 'provider-unavailable'
 
 export interface AgentBClaim {
   allegation: string
@@ -121,22 +121,9 @@ export async function auditOpposingFiling(params: AskAgentBParams): Promise<Agen
     filing_text: params.filingText,
     retrieved_legal_chunks: legalCorpus,
   })
-  const request = buildLlmRequest(params.provider, params.apiKey, params.model, prompt)
-
-  let response: Response
-  try {
-    response = await fetch(request.url, { method: 'POST', headers: request.headers, body: JSON.stringify(request.body) })
-  } catch {
-    return { status: 'llm-error', ...EMPTY_ANALYSIS, unreachableSources }
-  }
-  if (!response.ok) {
-    return { status: 'llm-error', ...EMPTY_ANALYSIS, unreachableSources }
-  }
-
-  const json = await response.json()
-  const replyText = extractLlmReplyText(params.provider, json)
+  const { text: replyText, circuitOpen } = await callLlm(params.provider, params.apiKey, params.model, prompt)
   if (!replyText) {
-    return { status: 'llm-error', ...EMPTY_ANALYSIS, unreachableSources }
+    return { status: circuitOpen ? 'provider-unavailable' : 'llm-error', ...EMPTY_ANALYSIS, unreachableSources }
   }
 
   const parsed = parseAuditReply(replyText)

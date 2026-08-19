@@ -122,22 +122,6 @@ export interface StoredProofOfServiceRecord {
 }
 
 /**
- * The blueprint's `offline_request_queue` table — an AI request (an LLM call this
- * app couldn't make while offline) saved for real replay once connectivity
- * returns, rather than silently dropped. Not case-scoped (a query might span
- * cases, or be a general question), so indexed only by createdAt for FIFO replay
- * order. `attempts` isn't part of the encrypted content — it's operational
- * metadata about the queue entry itself, not sensitive case content, and Chunk
- * 37's replay logic needs to read/increment it without a decrypt round-trip.
- */
-export interface StoredOfflineQueueRecord {
-  id: string
-  createdAt: number
-  attempts: number
-  dataEnc: string
-}
-
-/**
  * Singleton row (id: 'singleton', same pattern as VaultMetaRecord) holding BYOK
  * settings — which provider is active, and each provider's API key/model/base URL.
  * API keys are exactly the kind of sensitive field the encrypted-envelope pattern
@@ -186,9 +170,18 @@ export interface StoredExhibitListRecord {
  * case-scoped, see StoredOfflineQueueRecord.
  * v8: llmSettings, a singleton row indexed only by id — same shape
  * as vaultMeta's own single-row table.
- * v9 (this chunk): exhibitLists, indexed the same way as documents/deadlines/
- * proofOfService (id, caseId) — createdAt isn't part of the index since there's at
- * most one row per case, nothing to sort chronologically.
+ * v9: exhibitLists, indexed the same way as documents/deadlines/proofOfService
+ * (id, caseId) — createdAt isn't part of the index since there's at most one row
+ * per case, nothing to sort chronologically.
+ * v10 (this chunk): DROPS offlineQueue (Dexie deletes a table when its value is
+ * null). The first non-additive version in this app's history, and deliberately so:
+ * Chunk 37's offline request queue was built against the pre-pivot server design
+ * and never fit the in-browser app Stage 8 produced — every LLM call here is
+ * interactive request/response with a user waiting, so a replayed question has
+ * nowhere to deliver its answer. The table was never written to by any shipped code
+ * path, so dropping it destroys no real data; leaving it would just be a permanently
+ * empty table backing a feature that doesn't exist. The circuit breaker from the
+ * same chunk IS kept and is now wired into every agent (src/llm/callLlm.ts).
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
@@ -199,7 +192,6 @@ export class PlcmDatabase extends Dexie {
   pdfTemplates!: EntityTable<StoredPdfTemplateRecord, 'id'>
   fieldMappings!: EntityTable<StoredFieldMappingRecord, 'id'>
   proofOfService!: EntityTable<StoredProofOfServiceRecord, 'id'>
-  offlineQueue!: EntityTable<StoredOfflineQueueRecord, 'id'>
   llmSettings!: EntityTable<StoredLlmSettingsRecord, 'id'>
   exhibitLists!: EntityTable<StoredExhibitListRecord, 'id'>
 
@@ -278,6 +270,19 @@ export class PlcmDatabase extends Dexie {
       fieldMappings: 'id, templateId, createdAt',
       proofOfService: 'id, caseId, createdAt',
       offlineQueue: 'id, createdAt',
+      llmSettings: 'id',
+      exhibitLists: 'id, caseId',
+    })
+    this.version(10).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+      offlineQueue: null,
       llmSettings: 'id',
       exhibitLists: 'id, caseId',
     })

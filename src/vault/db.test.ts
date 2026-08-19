@@ -152,12 +152,12 @@ describe('PlcmDatabase migrations', () => {
     await current.open()
 
     expect(await current.proofOfService.get('pos-1')).toMatchObject({ dataEnc: 'x' })
-    expect(await current.offlineQueue.count()).toBe(0)
-    await current.offlineQueue.put({ id: 'oq-1', createdAt: 1, attempts: 0, dataEnc: 'x' })
-    expect(await current.offlineQueue.get('oq-1')).toMatchObject({ dataEnc: 'x' })
+    // offlineQueue was added at v7 and dropped again at v10 — a database that never
+    // saw it should end up at head without it, same as one that did.
+    expect(current.tables.map((t) => t.name)).not.toContain('offlineQueue')
   })
 
-  it('preserves v7-era offlineQueue data when reopened at v8, and adds llmSettings cleanly', async () => {
+  it('drops the v7-era offlineQueue table by v10, while preserving everything else', async () => {
     const name = `migration-test-${crypto.randomUUID()}`
     const v7 = new Dexie(name)
     v7.version(1).stores({ vaultMeta: 'id' })
@@ -208,7 +208,10 @@ describe('PlcmDatabase migrations', () => {
     openDbs.push(current)
     await current.open()
 
-    expect(await current.offlineQueue.get('oq-1')).toMatchObject({ dataEnc: 'x', attempts: 2 })
+    // v10 drops offlineQueue. This database really had the table with a real row in
+    // it, so this is the case that proves the drop runs rather than being a no-op on
+    // an already-absent table.
+    expect(current.tables.map((t) => t.name)).not.toContain('offlineQueue')
     expect(await current.llmSettings.get('singleton')).toBeUndefined()
     await current.llmSettings.put({ id: 'singleton', dataEnc: 'x' })
     expect(await current.llmSettings.get('singleton')).toMatchObject({ dataEnc: 'x' })

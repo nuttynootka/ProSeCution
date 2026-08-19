@@ -1,9 +1,9 @@
-import { buildLlmRequest, extractLlmReplyText, type LlmProviderDef } from '../llm'
+import { callLlm, type LlmProviderDef } from '../llm'
 import type { PdfTextItem } from '../pdf'
 import type { BoundingBox, TemplateField } from '../pdf'
 import { getPromptTemplate, renderPromptTemplate } from '../prompts'
 
-export type AgentCStatus = 'suggested' | 'no-text' | 'llm-error'
+export type AgentCStatus = 'suggested' | 'no-text' | 'llm-error' | 'provider-unavailable'
 
 export interface AgentCResult {
   status: AgentCStatus
@@ -119,22 +119,9 @@ export async function suggestFieldsFromPage(params: AskAgentCParams): Promise<Ag
 
   const template = getPromptTemplate('agent-c-pdf-field-extractor')!
   const prompt = renderPromptTemplate(template.template, { ocr_text_with_bboxes: serializeTextItems(meaningfulItems) })
-  const request = buildLlmRequest(params.provider, params.apiKey, params.model, prompt)
-
-  let response: Response
-  try {
-    response = await fetch(request.url, { method: 'POST', headers: request.headers, body: JSON.stringify(request.body) })
-  } catch {
-    return { status: 'llm-error', fields: [] }
-  }
-  if (!response.ok) {
-    return { status: 'llm-error', fields: [] }
-  }
-
-  const json = await response.json()
-  const replyText = extractLlmReplyText(params.provider, json)
+  const { text: replyText, circuitOpen } = await callLlm(params.provider, params.apiKey, params.model, prompt)
   if (!replyText) {
-    return { status: 'llm-error', fields: [] }
+    return { status: circuitOpen ? 'provider-unavailable' : 'llm-error', fields: [] }
   }
 
   return { status: 'suggested', fields: parseSuggestedFields(replyText) }

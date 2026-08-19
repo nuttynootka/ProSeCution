@@ -11,3 +11,5 @@ export { LlmSettingsRepository } from './LlmSettingsRepository'
 export type { LlmProviderConfig, LlmSettingsContent } from './LlmSettingsRepository'
 
 export const llmSettingsRepository = new LlmSettingsRepository(db, vault)
+export { callLlm, resetLlmCircuits } from './callLlm'
+export type { LlmCallResult } from './callLlm'

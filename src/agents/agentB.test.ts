@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getProviderDef } from '../llm'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getProviderDef, resetLlmCircuits } from '../llm'
 import { auditOpposingFiling } from './agentB'
 
 const groq = getProviderDef('groq')!
@@ -29,6 +29,12 @@ function mockFetch(handlers: Record<string, () => Promise<Response> | Response>)
 }
 
 const BASE_PARAMS = { filingText: 'COMPLAINT: Defendant owes $5,000.', jurisdiction: 'CA', provider: groq, apiKey: 'k', model: 'm' }
+
+// The circuit breaker behind callLlm is module-level and shared, so a test that
+// fails an LLM call three times would otherwise leave it tripped for the next one.
+beforeEach(() => {
+  resetLlmCircuits()
+})
 
 afterEach(() => {
   vi.unstubAllGlobals()

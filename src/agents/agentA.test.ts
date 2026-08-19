@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getProviderDef } from '../llm'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getProviderDef, resetLlmCircuits } from '../llm'
 import { askAgentA } from './agentA'
 
 const groq = getProviderDef('groq')!
@@ -28,6 +28,12 @@ function htmlResponse(text: string): Response {
 function llmResponse(content: string): Response {
   return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content } }] }) } as Response
 }
+
+// The circuit breaker behind callLlm is module-level and shared, so a test that
+// fails an LLM call three times would otherwise leave it tripped for the next one.
+beforeEach(() => {
+  resetLlmCircuits()
+})
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -127,6 +133,32 @@ describe('askAgentA', () => {
     const result = await askAgentA({ query: 'q', jurisdiction: 'CA', provider: groq, apiKey: 'k', model: 'm' })
 
     expect(result.status).toBe('llm-error')
+  })
+
+  it('reports provider-unavailable — not another generic llm-error — once the provider has failed repeatedly', async () => {
+    let llmCalls = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url !== GROQ_URL) return htmlResponse('source text')
+        llmCalls += 1
+        throw new TypeError('Failed to fetch')
+      }),
+    )
+
+    // Three real attempts trip the breaker...
+    for (let i = 0; i < 3; i++) {
+      const r = await askAgentA({ query: 'q', jurisdiction: 'CA', provider: groq, apiKey: 'k', model: 'm' })
+      expect(r.status).toBe('llm-error')
+    }
+    expect(llmCalls).toBe(3)
+
+    // ...and the next one fails instantly with a distinct status, never touching the
+    // network again — the whole point of the fuse.
+    const fourth = await askAgentA({ query: 'q', jurisdiction: 'CA', provider: groq, apiKey: 'k', model: 'm' })
+
+    expect(fourth.status).toBe('provider-unavailable')
+    expect(llmCalls).toBe(3)
   })
 
   it('flags a source whose fetched text had to be truncated', async () => {

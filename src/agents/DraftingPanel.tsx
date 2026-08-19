@@ -29,6 +29,8 @@ const STATUS_NOTE: Record<Exclude<AgentDResult['status'], 'drafted'>, string> = 
     "The outline kept citing authorities that don't appear in the retrieved sources, even after one retry — stopped before drafting rather than build on an uncited outline.",
   'draft-error': 'The outline was generated, but the full-draft stage failed. Check your Vault settings and try again.',
   'critique-error': 'The draft was generated, but the review stage failed. Check your Vault settings and try again.',
+  'provider-unavailable':
+    'Your AI provider has failed several times in a row, so the app has stopped retrying for a minute. Check your API key and model in Vault settings — a wrong key fails every time.',
 }
 
 function triggerTextDownload(filename: string, text: string): void {

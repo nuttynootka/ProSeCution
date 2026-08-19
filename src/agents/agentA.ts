@@ -1,11 +1,11 @@
 import { legalSourcesFor } from '../legalSources'
-import { buildLlmRequest, extractLlmReplyText, type LlmProviderDef } from '../llm'
+import { callLlm, type LlmProviderDef } from '../llm'
 import { AGENT_A_GROUNDED_QA, renderPromptTemplate } from '../prompts'
 import { retrieveLegalChunks, type RetrievedChunk } from './retrieval'
 
 const OUT_OF_BOUNDS_SENTINEL = 'ERR_OUT_OF_BOUNDS_LEGAL_CORPUS'
 
-export type AgentAStatus = 'answered' | 'out-of-bounds' | 'no-sources' | 'retrieval-failed' | 'llm-error'
+export type AgentAStatus = 'answered' | 'out-of-bounds' | 'no-sources' | 'retrieval-failed' | 'llm-error' | 'provider-unavailable'
 
 export interface AgentACitation {
   sourceRef: string
@@ -92,37 +92,10 @@ export async function askAgentA(params: AskAgentAParams): Promise<AgentAResult> 
     user_query: params.query,
   })
 
-  const request = buildLlmRequest(params.provider, params.apiKey, params.model, prompt)
-  let response: Response
-  try {
-    response = await fetch(request.url, { method: 'POST', headers: request.headers, body: JSON.stringify(request.body) })
-  } catch {
-    return {
-      status: 'llm-error',
-      answerText: '',
-      verifiedCitations: [],
-      unverifiedCitations: [],
-      truncatedSources: chunks.filter((c) => c.truncated).map((c) => c.source.label),
-      unreachableSources: unreachable.map((s) => s.label),
-    }
-  }
-
-  if (!response.ok) {
-    return {
-      status: 'llm-error',
-      answerText: '',
-      verifiedCitations: [],
-      unverifiedCitations: [],
-      truncatedSources: chunks.filter((c) => c.truncated).map((c) => c.source.label),
-      unreachableSources: unreachable.map((s) => s.label),
-    }
-  }
-
-  const json = await response.json()
-  const answerText = extractLlmReplyText(params.provider, json)
+  const { text: answerText, circuitOpen } = await callLlm(params.provider, params.apiKey, params.model, prompt)
   if (!answerText) {
     return {
-      status: 'llm-error',
+      status: circuitOpen ? 'provider-unavailable' : 'llm-error',
       answerText: '',
       verifiedCitations: [],
       unverifiedCitations: [],

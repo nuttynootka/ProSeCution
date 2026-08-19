@@ -25,6 +25,8 @@ const STATUS_NOTE: Record<Exclude<AgentAResult['status'], 'answered'>, string> =
   'retrieval-failed': "Couldn't retrieve any of the relevant source pages right now. Check your connection and try again.",
   'llm-error': 'Could not get a response from your configured AI provider. Check your Vault settings and try again.',
   'out-of-bounds': "The available sources don't contain enough information to answer this — see the explanation below rather than a guess.",
+  'provider-unavailable':
+    'Your AI provider has failed several times in a row, so the app has stopped retrying for a minute. Check your API key and model in Vault settings — a wrong key fails every time.',
 }
 
 /**
