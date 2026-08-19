@@ -112,28 +112,6 @@
   outline-offset: 1px;
 }
 
-.stubCard {
-  padding: 14px 16px;
-  border-radius: var(--plcm-radius-lg);
-  background: linear-gradient(160deg, rgba(124, 58, 237, 0.16), rgba(37, 99, 235, 0.08));
-  border: 1px dashed rgba(196, 181, 253, 0.35);
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.stubTitle {
-  font: 600 13px/1.3 var(--plcm-font-sans);
-  color: var(--plcm-heading);
-}
-
-.stubNote {
-  font: 500 11.5px/1.4 var(--plcm-font-sans);
-  color: var(--plcm-text-dim);
-}
-
 .redactionList {
   display: flex;
   flex-direction: column;

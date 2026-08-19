@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { caseRepository, type Case } from '../cases'
+import { DeadlineAlertsCard } from '../deadlines/DeadlineAlertsCard'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import {
   buildIcsCalendar,
@@ -121,6 +122,10 @@ export function DeadlinesScreen() {
       <div className={styles.header}>
         <div className={styles.headerKicker}>{pending.length === 1 ? '1 DEADLINE' : `${pending.length} DEADLINES`}</div>
         <div className={styles.headerTitle}>Deadlines</div>
+      </div>
+
+      <div className={styles.alerts}>
+        <DeadlineAlertsCard deadlines={deadlines} />
       </div>
 
       {pending.length > 0 && (

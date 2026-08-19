@@ -167,6 +167,57 @@ describe('askAgentD', () => {
     expect(result.draftText).toBe('DRAFT body.')
   })
 
+  it('appends the jurisdiction style guide (blueprint 8.3) to the draft and critique stages, but not the outline', async () => {
+    const bodies: string[] = []
+    const llmQueue = [
+      () => llmResponse('{"sections":[{"citations":["[California Codes]"]}]}'),
+      () => llmResponse('DRAFT body.'),
+      () => llmResponse('FINAL body.'),
+    ]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        if (url !== GROQ_URL) return htmlResponse('source text')
+        bodies.push(init.body as string)
+        return llmQueue.shift()!()
+      }),
+    )
+
+    const result = await askAgentD(BASE_PARAMS)
+
+    expect(result.status).toBe('drafted')
+    expect(bodies).toHaveLength(3)
+    // Outline stage: no formatting rules to apply yet.
+    expect(bodies[0]).not.toContain('28-line pleading paper')
+    // Draft + critique stages: the real seeded CA guide actually reaches the model.
+    expect(bodies[1]).toContain('28-line pleading paper')
+    expect(bodies[2]).toContain('28-line pleading paper')
+  })
+
+  it('appends no style guide at all for a jurisdiction with none seeded, rather than inventing formatting rules', async () => {
+    const bodies: string[] = []
+    const llmQueue = [
+      () => llmResponse('{"sections":[{"citations":["[United States Code]"]}]}'),
+      () => llmResponse('DRAFT body.'),
+      () => llmResponse('FINAL body.'),
+    ]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        if (url !== GROQ_URL) return htmlResponse('source text')
+        bodies.push(init.body as string)
+        return llmQueue.shift()!()
+      }),
+    )
+
+    // 'federal' is a real seeded jurisdiction for legal sources, but has no seeded
+    // style guide — exactly the case that must contribute nothing.
+    const result = await askAgentD({ ...BASE_PARAMS, jurisdiction: 'federal' })
+
+    expect(result.status).toBe('drafted')
+    expect(bodies.some((b) => b.includes('STYLE GUIDE'))).toBe(false)
+  })
+
   it('reports which sources were unreachable while still completing with whatever succeeded', async () => {
     const llmQueue = [
       () => llmResponse('{"sections":[{"citations":["[California Codes]"]}]}'),

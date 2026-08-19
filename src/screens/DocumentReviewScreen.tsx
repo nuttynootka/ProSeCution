@@ -62,7 +62,6 @@ export function DocumentReviewScreen() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [fields, setFields] = useState<Fields | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [stubNote, setStubNote] = useState<'template' | null>(null)
   const [piiMatches, setPiiMatches] = useState<PiiMatch[]>([])
   const [excludedMatches, setExcludedMatches] = useState<Set<number>>(new Set())
   const [redactionApplied, setRedactionApplied] = useState(false)
@@ -389,17 +388,16 @@ export function DocumentReviewScreen() {
               </div>
             )}
 
-            <button
-              type="button"
-              className={styles.stubCard}
-              onClick={() => setStubNote('template')}
-              data-testid="stub-template"
-            >
-              <div className={styles.stubTitle}>Map to a form template</div>
-              <div className={styles.stubNote}>
-                {stubNote === 'template' ? 'Template mapping arrives in a later update.' : 'Use this document to fill a court form'}
-              </div>
-            </button>
+            {/*
+              A "Map to a form template" card used to sit here, saying template
+              mapping "arrives in a later update" — stale since Chunk 18/19 shipped
+              it. Removed rather than wired up, because its premise never matched
+              how the feature actually works: filling a court form populates fields
+              from the *case's* data (caseDataResolver.ts), not from the scanned
+              document in front of you, so "use this document to fill a form" would
+              have been a second inaccurate promise replacing the first. The real
+              flow lives on the case dashboard as "Fill a court form" (FillFormCard).
+            */}
 
             {saveError && (
               <div className={styles.errorBanner} role="alert" data-testid="review-save-error">

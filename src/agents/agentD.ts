@@ -1,6 +1,12 @@
 import { legalSourcesFor } from '../legalSources'
 import { buildLlmRequest, extractLlmReplyText, type LlmProviderDef } from '../llm'
-import { DRAFTING_CRITIQUE_PROMPT, DRAFTING_FULL_DRAFT_PROMPT, DRAFTING_OUTLINE_PROMPT, renderPromptTemplate } from '../prompts'
+import {
+  DRAFTING_CRITIQUE_PROMPT,
+  DRAFTING_FULL_DRAFT_PROMPT,
+  DRAFTING_OUTLINE_PROMPT,
+  renderPromptTemplate,
+  styleGuideFor,
+} from '../prompts'
 import { findUnverifiedCitations, retrieveLegalChunks, serializeChunksForPrompt, type RetrievedChunk } from './retrieval'
 
 export type AgentDStatus =
@@ -92,13 +98,24 @@ export async function askAgentD(params: AskAgentDParams): Promise<AgentDResult> 
     return { status: 'outline-uncited', ...EMPTY_RESULT, outlineText, uncitedOutlineCitations: stillUncited, unreachableSources }
   }
 
-  const draftPrompt = renderPromptTemplate(DRAFTING_FULL_DRAFT_PROMPT.template, { outline: outlineText, retrieved_legal_chunks: legalCorpus })
+  // Blueprint §8.3: "a detailed style guide is appended to the system prompt."
+  // Appended to the drafting and critique stages (where formatting actually
+  // matters), not the outline stage — an outline has no pleading-paper layout,
+  // line numbering, or signature block to get right. Only a jurisdiction with a
+  // real seeded guide contributes anything; every other one appends nothing rather
+  // than inventing local formatting rules (`styleGuideFor` returns undefined).
+  const styleGuide = styleGuideFor(params.jurisdiction)
+  const styleGuideBlock = styleGuide ? `\n\nSTYLE GUIDE — follow these local formatting rules exactly:\n${styleGuide.text}` : ''
+
+  const draftPrompt =
+    renderPromptTemplate(DRAFTING_FULL_DRAFT_PROMPT.template, { outline: outlineText, retrieved_legal_chunks: legalCorpus }) +
+    styleGuideBlock
   const draftText = await callLlm(params.provider, params.apiKey, params.model, draftPrompt)
   if (!draftText) {
     return { status: 'draft-error', ...EMPTY_RESULT, outlineText, unreachableSources }
   }
 
-  const critiquePrompt = renderPromptTemplate(DRAFTING_CRITIQUE_PROMPT.template, { draft: draftText })
+  const critiquePrompt = renderPromptTemplate(DRAFTING_CRITIQUE_PROMPT.template, { draft: draftText }) + styleGuideBlock
   const finalText = await callLlm(params.provider, params.apiKey, params.model, critiquePrompt)
   if (!finalText) {
     return { status: 'critique-error', ...EMPTY_RESULT, outlineText, draftText, unreachableSources }

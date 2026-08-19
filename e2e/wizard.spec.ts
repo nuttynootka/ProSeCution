@@ -23,10 +23,12 @@ test('creating a case through the wizard end to end', async ({ page }) => {
   await expect(page.getByTestId('wizard-continue')).toBeEnabled()
   await page.getByTestId('wizard-continue').click()
 
-  // Step 2 (topics stub): the CTA says what it does rather than doing nothing.
+  // Step 2 (topics): informational only — intake is built, but it's case-scoped and
+  // the case doesn't exist yet at this point, so this points at the real path
+  // instead of offering an import that would have nowhere to file the document.
   await expect(page.getByTestId('wizard-step-2')).toBeVisible()
-  await page.getByTestId('topics-scan-cta').click()
-  await expect(page.getByTestId('topics-scan-cta')).toHaveText(/later update/)
+  await expect(page.getByTestId('topics-intake-note')).toContainText('scan or import documents')
+  await expect(page.getByTestId('topics-intake-note')).not.toContainText('later update')
   await page.getByTestId('wizard-continue').click()
 
   // Step 3 (fee waiver, real as of Chunk 24): choosing "Yes" without entering
