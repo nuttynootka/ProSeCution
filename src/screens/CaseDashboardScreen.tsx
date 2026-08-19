@@ -10,6 +10,7 @@ import {
   type Case,
   type LitigationStage,
 } from '../cases'
+import { AskAgentACard } from '../agents/AskAgentACard'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import { countDeadlinesNeedingAttention, deadlineRepository } from '../deadlines'
 import { LogServiceDateCard } from '../deadlines/LogServiceDateCard'
@@ -227,6 +228,7 @@ export function CaseDashboardScreen() {
           onLogged={handleDeadlinesCreated}
         />
         <FillFormCard caseId={caseRecord.id} />
+        <AskAgentACard jurisdiction={caseRecord.state} caseType={caseRecord.caseType} />
 
         {caseRecord.feeWaiverStatus && (
           <button
