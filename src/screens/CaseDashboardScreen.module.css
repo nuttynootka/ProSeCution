@@ -197,6 +197,20 @@
   color: var(--plcm-text-faint);
 }
 
+.stageLabels button {
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.stageLabelButton {
+  color: var(--plcm-text-faint);
+}
+
 .stageLabelCurrent {
   color: var(--plcm-purple-lighter);
 }

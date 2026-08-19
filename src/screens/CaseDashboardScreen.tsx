@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { buildActivityTimeline, type ActivityEntry } from '../cases/activity'
-import { placeholderPostureScore, STAGE_LABELS, stageIndex } from '../cases/posture'
+import { advancedStage, computePostureScore, detectStageSignal, STAGE_LABELS, stageIndex } from '../cases/posture'
 import {
   caseRepository,
   formatJurisdiction,
@@ -12,7 +12,7 @@ import {
 } from '../cases'
 import { AskAgentACard } from '../agents/AskAgentACard'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
-import { countDeadlinesNeedingAttention, deadlineRepository } from '../deadlines'
+import { countDeadlinesNeedingAttention, deadlineRepository, type Deadline } from '../deadlines'
 import { LogServiceDateCard } from '../deadlines/LogServiceDateCard'
 import { documentRepository } from '../documents'
 import { checkFeeWaiverEligibility, generateFeeWaiverWorksheet } from '../feeWaiver'
@@ -34,10 +34,10 @@ const FEE_WAIVER_BADGE_LABEL: Record<'eligible' | 'not_eligible' | 'undetermined
 }
 
 const STAGE_DESCRIPTIONS: Record<LitigationStage, string> = {
-  pleadings: 'Case filed. Nothing else tracked yet — deadlines, documents and drafts will show up here as they are added.',
-  discovery: 'In discovery. Deadline, document and draft tracking will appear here once those features are built.',
-  motions: 'Motion practice underway. Deadline, document and draft tracking will appear here once those features are built.',
-  trial: 'Preparing for trial. Deadline, document and draft tracking will appear here once those features are built.',
+  pleadings: 'Case filed. Deadlines and documents added from here will be tracked automatically.',
+  discovery: 'In discovery. Detected from a real discovery-related deadline or document on this case.',
+  motions: 'Motion practice underway. Detected from a real motion filing or court order on this case.',
+  trial: 'Preparing for trial — set manually below; nothing in this app currently detects a trial date automatically.',
 }
 
 export function CaseDashboardScreen() {
@@ -46,23 +46,43 @@ export function CaseDashboardScreen() {
   const [caseRecord, setCaseRecord] = useState<Case | null | undefined>(undefined)
   const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [documentCount, setDocumentCount] = useState(0)
+  const [deadlines, setDeadlines] = useState<Deadline[]>([])
   const [deadlinesNeedingAttention, setDeadlinesNeedingAttention] = useState(0)
 
   useEffect(() => {
     if (!caseId) return
     let cancelled = false
-    Promise.all([
-      caseRepository.get(caseId),
-      partyRepository.listForCase(caseId),
-      documentRepository.listForCase(caseId),
-      deadlineRepository.listForCase(caseId),
-    ]).then(([foundCase, parties, documents, deadlines]) => {
+
+    async function run() {
+      const [foundCase, parties, documents, loadedDeadlines] = await Promise.all([
+        caseRepository.get(caseId!),
+        partyRepository.listForCase(caseId!),
+        documentRepository.listForCase(caseId!),
+        deadlineRepository.listForCase(caseId!),
+      ])
       if (cancelled) return
-      setCaseRecord(foundCase ?? null)
+      if (!foundCase) {
+        setCaseRecord(null)
+        return
+      }
+
+      // Real stage detection (Chunk 47): only ever advances the case forward from
+      // whatever real activity (deadline triggers, document types) actually
+      // implies — never overwrites a manual choice backward (see advancedStage).
+      // Persisted immediately so the stage doesn't silently differ between visits.
+      const signal = detectStageSignal(loadedDeadlines, documents)
+      const advanced = advancedStage(foundCase.currentStage, signal)
+      const effectiveCase = advanced === foundCase.currentStage ? foundCase : await caseRepository.update(caseId!, { currentStage: advanced })
+      if (cancelled) return
+
+      setCaseRecord(effectiveCase)
       setDocumentCount(documents.length)
-      setDeadlinesNeedingAttention(countDeadlinesNeedingAttention(deadlines, Date.now()))
-      if (foundCase) setActivity(buildActivityTimeline(foundCase, parties, documents))
-    })
+      setDeadlines(loadedDeadlines)
+      setDeadlinesNeedingAttention(countDeadlinesNeedingAttention(loadedDeadlines, Date.now()))
+      setActivity(buildActivityTimeline(effectiveCase, parties, documents))
+    }
+
+    void run()
     return () => {
       cancelled = true
     }
@@ -92,10 +112,24 @@ export function CaseDashboardScreen() {
   }
 
   const handleDeadlinesCreated = () => {
-    if (!caseId) return
-    deadlineRepository
-      .listForCase(caseId)
-      .then((deadlines) => setDeadlinesNeedingAttention(countDeadlinesNeedingAttention(deadlines, Date.now())))
+    if (!caseId || !caseRecord) return
+    deadlineRepository.listForCase(caseId).then(async (loadedDeadlines) => {
+      setDeadlines(loadedDeadlines)
+      setDeadlinesNeedingAttention(countDeadlinesNeedingAttention(loadedDeadlines, Date.now()))
+      // A newly logged deadline can itself be the signal that advances the stage
+      // (e.g. logging a discovery deadline) — recheck rather than waiting for the
+      // next full page load.
+      const advanced = advancedStage(caseRecord.currentStage, detectStageSignal(loadedDeadlines, []))
+      if (advanced !== caseRecord.currentStage) {
+        setCaseRecord(await caseRepository.update(caseId, { currentStage: advanced }))
+      }
+    })
+  }
+
+  /** The blueprint's own risk note for this feature — "Misdetection → Manual override" — a real person can always jump the case to any stage directly, regardless of what auto-detection would otherwise conclude. */
+  const handleManualStageChange = async (stage: LitigationStage) => {
+    if (!caseId || !caseRecord || stage === caseRecord.currentStage) return
+    setCaseRecord(await caseRepository.update(caseId, { currentStage: stage }))
   }
 
   if (caseRecord === undefined) return null
@@ -106,7 +140,7 @@ export function CaseDashboardScreen() {
     )
   }
 
-  const score = placeholderPostureScore(caseRecord.currentStage)
+  const score = computePostureScore(caseRecord.currentStage, deadlines)
   const currentIndex = stageIndex(caseRecord.currentStage)
   const ringDeg = score * 3.6
 
@@ -186,9 +220,15 @@ export function CaseDashboardScreen() {
             </div>
             <div className={styles.stageLabels}>
               {LITIGATION_STAGES.map((stage) => (
-                <span key={stage} className={stage === caseRecord.currentStage ? styles.stageLabelCurrent : undefined}>
+                <button
+                  key={stage}
+                  type="button"
+                  className={stage === caseRecord.currentStage ? styles.stageLabelCurrent : styles.stageLabelButton}
+                  onClick={() => void handleManualStageChange(stage)}
+                  data-testid={`stage-label-${stage}`}
+                >
                   {STAGE_LABELS[stage].toUpperCase()}
-                </span>
+                </button>
               ))}
             </div>
           </div>
