@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectPii, redactText, type PiiMatch } from './detectPii'
+import { detectAmbiguousPii, detectPii, redactText, type PiiMatch } from './detectPii'
 
 const TODAY = new Date(2024, 0, 1) // fixed reference date — keeps minor/adult classification deterministic
 
@@ -140,6 +140,59 @@ describe('detectPii > financial accounts', () => {
   it('cites Fed. R. Civ. P. 5.2 for financial accounts', () => {
     const [match] = detectPii('Account #: 1234567890')
     expect(match.ruleCitation).toContain('Fed. R. Civ. P. 5.2')
+  })
+})
+
+describe('detectAmbiguousPii', () => {
+  it.each([
+    ['area 000 is never issued', '000-12-3456'],
+    ['area 666 is never issued', '666-12-3456'],
+    ['area 900+ is never issued', '923-45-6789'],
+    ['group 00 is never issued', '123-00-4567'],
+    ['serial 0000 is never issued', '123-45-0000'],
+  ])('surfaces a format-valid but SSA-impossible SSN as an ambiguous candidate: %s', (_label, ssn) => {
+    const candidates = detectAmbiguousPii(`Number: ${ssn}`)
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({ type: 'ssn', text: ssn })
+  })
+
+  it('does not surface a confidently-matched SSN as ambiguous', () => {
+    expect(detectAmbiguousPii('My number is 555-44-3333 on the form.')).toHaveLength(0)
+  })
+
+  it('surfaces a Luhn-invalid card-shaped number as an ambiguous financial candidate', () => {
+    const candidates = detectAmbiguousPii('Card on file: 4111 1111 1111 1112')
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({ type: 'financial-account', text: '4111 1111 1111 1112' })
+  })
+
+  it('surfaces a routing number that fails the ABA checksum as ambiguous', () => {
+    const candidates = detectAmbiguousPii('Routing Number: 123456789')
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({ type: 'financial-account', text: '123456789' })
+  })
+
+  it('does not surface a confidently-matched labeled account number as ambiguous', () => {
+    expect(detectAmbiguousPii('Account #: 1234567890')).toHaveLength(0)
+  })
+
+  it('does not treat an unlabeled 9-digit number as an ambiguous routing candidate', () => {
+    expect(detectAmbiguousPii('Reference 123456789 on the invoice.')).toHaveLength(0)
+  })
+
+  it('gives each candidate a unique id and a real surrounding-context snippet', () => {
+    const text = 'Please note account number 000-12-3456 on this filing for reference.'
+    const [candidate] = detectAmbiguousPii(text)
+    expect(candidate.id).toBeTruthy()
+    expect(candidate.context).toContain('000-12-3456')
+    expect(candidate.context).toContain('account number')
+  })
+
+  it('returns candidates in source order with distinct ids', () => {
+    const candidates = detectAmbiguousPii('First: 000-12-3456. Second, Routing Number: 123456789.')
+    expect(candidates).toHaveLength(2)
+    expect(candidates[0].start).toBeLessThan(candidates[1].start)
+    expect(new Set(candidates.map((c) => c.id)).size).toBe(2)
   })
 })
 

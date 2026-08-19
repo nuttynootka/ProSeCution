@@ -238,6 +238,96 @@ function detectFinancialAccounts(text: string): PiiMatch[] {
   return matches
 }
 
+// --- Ambiguous candidates (for Agent E, Chunk 41) ---------------------------
+
+export type PiiCandidateType = 'ssn' | 'financial-account'
+
+export interface PiiCandidate {
+  id: string
+  type: PiiCandidateType
+  text: string
+  start: number
+  end: number
+  /** A short window of surrounding text — the only extra signal Agent E gets, since it must not use outside knowledge of the document. */
+  context: string
+}
+
+const CONTEXT_RADIUS = 30
+
+function contextAround(text: string, start: number, end: number): string {
+  const from = Math.max(0, start - CONTEXT_RADIUS)
+  const to = Math.min(text.length, end + CONTEXT_RADIUS)
+  return text.slice(from, to)
+}
+
+interface RawCandidateSpan {
+  text: string
+  start: number
+  end: number
+}
+
+function dedupeCandidates(raw: RawCandidateSpan[], type: PiiCandidateType, sourceText: string): Omit<PiiCandidate, 'id'>[] {
+  const result: Omit<PiiCandidate, 'id'>[] = []
+  for (const r of raw) {
+    if (result.some((c) => overlaps(c, r))) continue
+    result.push({ type, text: r.text, start: r.start, end: r.end, context: contextAround(sourceText, r.start, r.end) })
+  }
+  return result
+}
+
+/** SSN-shaped digit runs that detectSsn() itself declines to trust — its own SSA-issuance plausibility check (isPlausibleSsn) is a heuristic, not a guarantee, so "fails the heuristic" is a genuine ambiguous case, not a confident non-match. */
+function ambiguousSsnCandidates(text: string): Omit<PiiCandidate, 'id'>[] {
+  const raw: RawCandidateSpan[] = []
+  for (const pattern of [SSN_LABELED_PATTERN, SSN_DASHED_PATTERN]) {
+    pattern.lastIndex = 0
+    let m: RegExpExecArray | null
+    while ((m = pattern.exec(text))) {
+      const digitsText = m[1]
+      const parts = digitsText.match(SSN_DIGITS_PATTERN)
+      if (!parts || isPlausibleSsn(parts[1], parts[2], parts[3])) continue
+      const start = m.index + m[0].length - digitsText.length
+      raw.push({ text: digitsText, start, end: start + digitsText.length })
+    }
+  }
+  return dedupeCandidates(raw, 'ssn', text)
+}
+
+/** Financial-shaped digit runs that fail the confident detector's own checksum — a routing number that fails the ABA checksum, or a 13-19 digit run that fails Luhn. Luhn only applies to card numbers, not account numbers generally, so a real (non-card) account number failing it is expected, not disqualifying — a genuine ambiguous case for Agent E, not a confident non-match. */
+function ambiguousFinancialCandidates(text: string): Omit<PiiCandidate, 'id'>[] {
+  const raw: RawCandidateSpan[] = []
+
+  LABELED_ROUTING_PATTERN.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = LABELED_ROUTING_PATTERN.exec(text))) {
+    if (routingChecksumValid(m[1])) continue
+    const start = m.index + m[0].length - m[1].length
+    raw.push({ text: m[1], start, end: start + m[1].length })
+  }
+
+  CARD_NUMBER_PATTERN.lastIndex = 0
+  while ((m = CARD_NUMBER_PATTERN.exec(text))) {
+    const digits = m[0].replace(/[ -]/g, '')
+    if (digits.length < 13 || digits.length > 19) continue
+    if (luhnValid(digits)) continue
+    raw.push({ text: m[0], start: m.index, end: m.index + m[0].length })
+  }
+
+  return dedupeCandidates(raw, 'financial-account', text)
+}
+
+/**
+ * The genuinely ambiguous cases — structurally suspicious spans that detectPii()'s
+ * own precision checks (SSA issuance rules, Luhn, ABA routing checksum) declined to
+ * trust, surfaced with context for a second opinion (Agent E, Chunk 41) instead of
+ * being silently dropped or over-redacted. Deliberately reuses detectPii()'s own
+ * patterns rather than inventing looser ones — this stays a tight, deterministic set
+ * of specific near-misses, not a general "anything number-shaped" net.
+ */
+export function detectAmbiguousPii(text: string): PiiCandidate[] {
+  const combined = [...ambiguousSsnCandidates(text), ...ambiguousFinancialCandidates(text)].sort((a, b) => a.start - b.start)
+  return combined.map((c, i) => ({ ...c, id: `candidate-${i}` }))
+}
+
 /**
  * Scans free text for SSNs, dates of birth (flagging minors' DOBs distinctly), and
  * financial account numbers. Matches are non-overlapping — the most specific /

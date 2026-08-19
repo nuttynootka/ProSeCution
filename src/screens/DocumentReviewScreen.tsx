@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { reviewAmbiguousPii } from '../agents'
 import { caseRepository } from '../cases'
 import { GlassSurface } from '../components/GlassSurface'
 import { documentRepository } from '../documents'
+import { getProviderDef, llmSettingsRepository } from '../llm'
 import { categorizeDocument, DOCUMENT_TYPES, extractCaseNumber, recognizeText, type DocumentType } from '../ocr'
-import { detectPii, redactText, type PiiMatch } from '../redaction'
+import { detectAmbiguousPii, detectPii, redactText, type PiiCandidate, type PiiMatch } from '../redaction'
 import { ChipGroup } from '../wizard/ChipGroup'
 import { SectionLabel, TextInput } from '../wizard/Field'
 import { PrimaryButton } from '../wizard/PrimaryButton'
@@ -20,6 +22,7 @@ const PII_TYPE_LABEL: Record<PiiMatch['type'], string> = {
 }
 
 type Phase = 'loading' | 'ready' | 'saving' | 'load-error'
+type AgentEState = 'idle' | 'working' | 'no-provider' | 'llm-error' | 'done'
 
 interface Fields {
   documentType: DocumentType
@@ -63,6 +66,8 @@ export function DocumentReviewScreen() {
   const [piiMatches, setPiiMatches] = useState<PiiMatch[]>([])
   const [excludedMatches, setExcludedMatches] = useState<Set<number>>(new Set())
   const [redactionApplied, setRedactionApplied] = useState(false)
+  const [ambiguousCandidates, setAmbiguousCandidates] = useState<PiiCandidate[]>([])
+  const [agentEState, setAgentEState] = useState<AgentEState>('idle')
 
   useEffect(() => {
     if (!documentId) return
@@ -84,6 +89,7 @@ export function DocumentReviewScreen() {
             caseNumber: extractCaseNumber(result.text) ?? '',
           })
           setPiiMatches(detectPii(result.text))
+          setAmbiguousCandidates(detectAmbiguousPii(result.text))
         } else {
           if (cancelled) return
           setFields({ documentType: 'Other', hasOcr: false, ocrText: '', ocrConfidence: null, caseNumber: '' })
@@ -108,8 +114,10 @@ export function DocumentReviewScreen() {
   const handleOcrTextChange = (text: string) => {
     patch({ ocrText: text })
     setPiiMatches(detectPii(text))
+    setAmbiguousCandidates(detectAmbiguousPii(text))
     setExcludedMatches(new Set())
     setRedactionApplied(false)
+    setAgentEState('idle')
   }
 
   const toggleMatch = (index: number) => {
@@ -125,10 +133,66 @@ export function DocumentReviewScreen() {
 
   const handleApplyRedaction = () => {
     if (!fields) return
-    patch({ ocrText: redactText(fields.ocrText, activeMatches) })
+    const redacted = redactText(fields.ocrText, activeMatches)
+    patch({ ocrText: redacted })
     setPiiMatches([])
+    // The confident matches just got replaced with placeholder text, which shifts
+    // every offset after them — re-detecting against the redacted text (the same
+    // "re-scan on any text change" rule handleOcrTextChange already follows) is the
+    // only way to keep any still-outstanding ambiguous candidates' spans valid.
+    setAmbiguousCandidates(detectAmbiguousPii(redacted))
     setExcludedMatches(new Set())
     setRedactionApplied(true)
+  }
+
+  /**
+   * Agent E (Chunk 41, hand-drafted — not in the blueprint): asks the configured LLM
+   * about only the candidates detectAmbiguousPii() itself couldn't confidently
+   * resolve, never the confident matches detectPii() already trusts on its own. Any
+   * candidate the model actually flags as sensitive is added to the same redaction
+   * checklist as a confident match, still fully reviewable/uncheckable there — this
+   * never redacts anything without the user seeing and confirming it first.
+   */
+  const handleAskAgentE = async () => {
+    if (!fields) return
+    setAgentEState('working')
+
+    const settings = await llmSettingsRepository.get()
+    const providerId = settings.activeProviderId
+    const provider = providerId ? getProviderDef(providerId) : undefined
+    const config = providerId ? settings.providerConfigs[providerId] : undefined
+    if (!provider || (provider.requiresApiKey && !config?.apiKey)) {
+      setAgentEState('no-provider')
+      return
+    }
+
+    const result = await reviewAmbiguousPii({
+      text: fields.ocrText,
+      candidates: ambiguousCandidates,
+      provider,
+      apiKey: config?.apiKey ?? '',
+      model: config?.selectedModel ?? provider.defaultModel,
+    })
+
+    if (result.status === 'llm-error') {
+      setAgentEState('llm-error')
+      return
+    }
+
+    const flagged = result.reviews.filter((r) => r.isSensitive)
+    const newMatches: PiiMatch[] = flagged.map((r) => ({
+      type: r.candidate.type,
+      text: r.candidate.text,
+      start: r.candidate.start,
+      end: r.candidate.end,
+      ruleCitation: `Flagged by AI-assisted review: ${r.reason || 'possible sensitive identifier.'}`,
+    }))
+    // Appended, not re-sorted by position — excludedMatches tracks existing matches
+    // by index, and re-sorting here would silently shift what an already-toggled
+    // index actually points to.
+    setPiiMatches((prev) => [...prev, ...newMatches])
+    setAmbiguousCandidates([])
+    setAgentEState('done')
   }
 
   const goBackToCase = () => navigate(`/cases/${caseId}`)
@@ -273,6 +337,49 @@ export function DocumentReviewScreen() {
                 >
                   Redact {activeMatches.length} item{activeMatches.length === 1 ? '' : 's'}
                 </button>
+              </GlassSurface>
+            )}
+
+            {(ambiguousCandidates.length > 0 || agentEState === 'no-provider' || agentEState === 'llm-error' || agentEState === 'done') && (
+              <GlassSurface
+                style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}
+                data-testid="agent-e-panel"
+              >
+                <SectionLabel>Uncertain items</SectionLabel>
+                {ambiguousCandidates.length > 0 && (
+                  <>
+                    <p className={styles.note}>
+                      {ambiguousCandidates.length} item{ambiguousCandidates.length === 1 ? '' : 's'} looked possibly
+                      sensitive but couldn't be confirmed by rules alone.
+                    </p>
+                    <button
+                      type="button"
+                      className={styles.agentEButton}
+                      onClick={() => void handleAskAgentE()}
+                      disabled={agentEState === 'working'}
+                      data-testid="agent-e-review"
+                    >
+                      {agentEState === 'working'
+                        ? 'Reviewing…'
+                        : `Ask AI to review ${ambiguousCandidates.length} item${ambiguousCandidates.length === 1 ? '' : 's'}`}
+                    </button>
+                  </>
+                )}
+                {agentEState === 'no-provider' && (
+                  <p className={styles.note} data-testid="agent-e-note">
+                    Set up an AI provider in Vault settings first to use this.
+                  </p>
+                )}
+                {agentEState === 'llm-error' && (
+                  <p className={styles.note} data-testid="agent-e-note">
+                    Could not get a response from your configured AI provider. Check your Vault settings and try again.
+                  </p>
+                )}
+                {agentEState === 'done' && (
+                  <p className={styles.note} data-testid="agent-e-note">
+                    Reviewed — anything flagged as sensitive was added to the list above.
+                  </p>
+                )}
               </GlassSurface>
             )}
 

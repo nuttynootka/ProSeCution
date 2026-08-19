@@ -181,6 +181,22 @@
   cursor: default;
 }
 
+.agentEButton {
+  padding: 10px;
+  border-radius: var(--plcm-radius-sm);
+  text-align: center;
+  cursor: pointer;
+  background: linear-gradient(160deg, rgba(124, 58, 237, 0.16), rgba(37, 99, 235, 0.08));
+  border: 1px dashed rgba(196, 181, 253, 0.35);
+  font: 600 11.5px/1 var(--plcm-font-sans);
+  color: var(--plcm-heading);
+}
+
+.agentEButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .redactedNote {
   padding: 10px 14px;
   border-radius: var(--plcm-radius-sm);

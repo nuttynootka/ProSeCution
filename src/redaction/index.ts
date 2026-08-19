@@ -1,2 +1,2 @@
-export { detectPii, redactText } from './detectPii'
-export type { PiiMatch, PiiType, DetectPiiOptions } from './detectPii'
+export { detectAmbiguousPii, detectPii, redactText } from './detectPii'
+export type { DetectPiiOptions, PiiCandidate, PiiCandidateType, PiiMatch, PiiType } from './detectPii'
