@@ -47,6 +47,17 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
+  build: {
+    // Default (500 KiB) now reads as a false positive: Chunk 48's route-level
+    // React.lazy() split (App.tsx) already separates this app's genuinely heavy
+    // dependencies — pdf-lib+fontkit (~1.15 MB) and pdf.js's core (~445 KB) — into
+    // their own chunks that only load when a route actually needing them is
+    // visited, not as part of the initial bundle (which dropped from ~2.1 MB to
+    // ~315 KB from this same change — see App.tsx's own doc comment). Raised just
+    // above the larger of those two real, unavoidable, already-lazy chunks so the
+    // warning only fires again for a genuinely new, unsplit problem.
+    chunkSizeWarningLimit: 1200,
+  },
   server: { host: '127.0.0.1', port: 5173 },
   preview: { host: '127.0.0.1', port: 4173 },
 })

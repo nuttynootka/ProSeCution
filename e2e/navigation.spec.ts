@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { DESTINATIONS, START_PATH } from '../src/nav/destinations'
 import { setUpVault } from './helpers/vault'
 
@@ -6,6 +6,20 @@ import { setUpVault } from './helpers/vault'
 // bottom bar, and unknown routes fall back to the start destination. Updated for
 // Chunk 5: everything now sits behind the passphrase gate, so each test sets up a
 // fresh vault first.
+
+async function createCase(page: Page): Promise<void> {
+  await page.getByTestId('new-case-fab').click()
+  await page.getByTestId('chip-state-CA').click()
+  await page.getByTestId('county-input').fill('Los Angeles')
+  await page.getByTestId('wizard-continue').click()
+  await page.getByTestId('chip-case-type-Civil').click()
+  await page.getByTestId('plaintiff-name-input').fill('Maria Hartley')
+  await page.getByTestId('defendant-name-input').fill('R. Cordova')
+  await page.getByTestId('wizard-continue').click()
+  await page.getByTestId('wizard-continue').click()
+  await page.getByTestId('wizard-create').click()
+  await expect(page.getByTestId('case-row')).toHaveCount(1)
+}
 
 test.beforeEach(async ({ page }) => {
   await setUpVault(page)
@@ -16,6 +30,10 @@ test('opens on the start destination', async ({ page }) => {
 })
 
 test('every destination is reachable from the bottom bar', async ({ page }) => {
+  // Counsel's real screen (Chunk 42) only renders once a case exists — with none,
+  // it honestly shows an empty state instead, a different testid entirely.
+  await createCase(page)
+
   for (const destination of DESTINATIONS) {
     await page.getByTestId(`nav-${destination.label.toLowerCase()}`).click()
     await expect(page.getByTestId(destination.testId)).toBeVisible()

@@ -22,9 +22,10 @@ test('opening a case from the list shows its real dashboard', async ({ page }) =
   await page.getByTestId('case-row').click()
 
   await expect(page.getByTestId('screen-case-dashboard')).toBeVisible()
-  // A brand-new case: pleadings stage, the placeholder score for that stage, and
+  // A brand-new case: pleadings stage, the real computed score for that stage with
+  // no deadlines yet (Chunk 47's computePostureScore floor, not a placeholder), and
   // zero everywhere real data doesn't exist yet.
-  await expect(page.getByTestId('posture-score')).toHaveText('20')
+  await expect(page.getByTestId('posture-score')).toHaveText('10')
   await expect(page.getByText('Pleadings', { exact: true })).toBeVisible()
   await expect(page.getByTestId('stat-deadlines')).toContainText('0')
 
