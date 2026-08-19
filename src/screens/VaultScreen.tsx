@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { exportBackup, importBackup, IncorrectBackupPassphraseError, InvalidBackupFileError } from '../backup'
 import { GlassSurface } from '../components/GlassSurface'
+import { InstallPrompt } from '../components/InstallPrompt'
 import { LlmProviderSettingsCard } from '../llm/LlmProviderSettingsCard'
 import {
   estimateStorageUsage,
@@ -120,6 +121,8 @@ export function VaultScreen() {
       </div>
 
       <div className={styles.body}>
+        <InstallPrompt />
+
         <GlassSurface style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <SectionLabel>Status</SectionLabel>
           <div className={styles.statusRow}>
