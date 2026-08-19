@@ -1,6 +1,9 @@
 import fontkit from '@pdf-lib/fontkit'
 import { PDFDocument, type PDFFont, type PDFPage } from 'pdf-lib'
+import { layoutRuledLines } from './ruledLineEngine'
 import type { FieldMapping, TemplateField } from './types'
+
+export { wrapText } from './ruledLineEngine'
 
 let cachedFontBytes: Uint8Array | null = null
 
@@ -30,6 +33,12 @@ export interface FillFieldValues {
 const HORIZONTAL_INSET = 2
 const MAX_FONT_SIZE = 12
 
+export interface FillTemplateResult {
+  bytes: Uint8Array
+  /** Field ids where the ruled-line engine's (Chunk 45) own font-size floor still wasn't small enough to fit all the text within maxLines — content was truncated. Never populated silently; the caller is expected to disclose this. */
+  truncatedFieldIds: string[]
+}
+
 /**
  * Fills a template with the given values and flattens the result to a static,
  * non-interactive PDF — the blueprint's "AcroForm + manual mapping... export
@@ -52,12 +61,13 @@ export async function fillTemplate(
   mappings: FieldMapping[],
   values: FillFieldValues,
   fontBytes: Uint8Array,
-): Promise<Uint8Array> {
+): Promise<FillTemplateResult> {
   const pdfDoc = await PDFDocument.load(templateBytes)
   pdfDoc.registerFontkit(fontkit)
   const font = await pdfDoc.embedFont(fontBytes)
   primeFontShaping(font, Object.values(values))
   const pages = pdfDoc.getPages()
+  const truncatedFieldIds: string[] = []
 
   for (const mapping of mappings) {
     const page = pages[mapping.pageNum - 1]
@@ -67,31 +77,32 @@ export async function fillTemplate(
     for (const field of mapping.fields) {
       const value = values[field.fieldId]
       if (!value) continue
-      drawField(page, font, field, value, pageHeight)
+      if (drawField(page, font, field, value, pageHeight)) truncatedFieldIds.push(field.fieldId)
     }
   }
 
   pdfDoc.getForm().flatten()
-  return pdfDoc.save()
+  return { bytes: await pdfDoc.save(), truncatedFieldIds }
 }
 
-function drawField(page: PDFPage, font: PDFFont, field: TemplateField, value: string, pageHeight: number): void {
+/** Returns true when the field's text had to be truncated (ruled-line fields only — see layoutRuledLines). */
+function drawField(page: PDFPage, font: PDFFont, field: TemplateField, value: string, pageHeight: number): boolean {
   const { left, top, width, height } = field.boundingBox
 
   if (field.type === 'SINGLE_LINE') {
     const fontSize = Math.min(MAX_FONT_SIZE, height * 0.7)
     const y = pageHeight - top - height + (height - fontSize) / 2
     page.drawText(value, { x: left + HORIZONTAL_INSET, y, size: fontSize, font })
-    return
+    return false
   }
 
-  const fontSize = Math.min(MAX_FONT_SIZE, field.lineHeight * 0.7)
-  const lines = wrapText(value, width - HORIZONTAL_INSET * 2, fontSize, font).slice(0, field.maxLines)
-  let y = pageHeight - top - field.baselineYOffset - fontSize
-  for (const line of lines) {
-    page.drawText(line, { x: left + HORIZONTAL_INSET, y, size: fontSize, font })
+  const layout = layoutRuledLines(value, font, { width: width - HORIZONTAL_INSET * 2, maxLines: field.maxLines, lineHeight: field.lineHeight })
+  let y = pageHeight - top - field.baselineYOffset - layout.fontSize
+  for (const line of layout.lines) {
+    page.drawText(line, { x: left + HORIZONTAL_INSET, y, size: layout.fontSize, font })
     y -= field.lineHeight
   }
+  return layout.truncated
 }
 
 /**
@@ -118,23 +129,4 @@ function drawField(page: PDFPage, font: PDFFont, field: TemplateField, value: st
  */
 export function primeFontShaping(font: PDFFont, texts: string[]): void {
   font.widthOfTextAtSize(texts.join(' '), 1)
-}
-
-/** Greedy word wrap using the font's own measured width — a fixed characters-per-line guess would be wrong for any non-monospace font (Helvetica here) and every font size this scales with. */
-export function wrapText(text: string, maxWidth: number, fontSize: number, font: PDFFont): string[] {
-  const words = text.split(/\s+/).filter(Boolean)
-  const lines: string[] = []
-  let current = ''
-
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word
-    if (current === '' || font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
-      current = candidate
-    } else {
-      lines.push(current)
-      current = word
-    }
-  }
-  if (current) lines.push(current)
-  return lines
 }

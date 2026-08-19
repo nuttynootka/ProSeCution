@@ -99,6 +99,47 @@ test('generating a filled form downloads a real PDF containing the actual entere
   expect(await extractPdfText(bytes)).toContain('Maria Hartley-Overridden')
 })
 
+test('warns when even the smallest ruled-line font size cannot fit everything, but still generates a download', async ({ page }) => {
+  await setUpVault(page)
+  await createCaseAndOpenDashboard(page)
+
+  await page.getByTestId('nav-intake').click()
+  await page.getByTestId('import-template-fab').click()
+  await page.getByTestId('template-file-input').setInputFiles('e2e/fixtures/sample-summons.pdf')
+  await page.getByTestId('intake-template-name').fill('Ruled Field Form')
+  await page.getByTestId('intake-naming-save').click()
+  await page.getByTestId('template-row').click()
+
+  const stage = page.getByTestId('template-stage')
+  const box = (await stage.boundingBox())!
+  await stage.click({ position: { x: box.width * 0.3, y: box.height * 0.3 } })
+  await page.getByTestId('field-label-input').fill('Statement of facts')
+  await page.getByTestId('chip-field-type-MULTI_LINE_RULED').click()
+  await page.getByTestId('field-max-lines-input').fill('2')
+  await page.getByTestId('studio-save').click()
+  await expect(page.getByTestId('studio-save-note')).toBeVisible()
+  await page.getByTestId('studio-back').click()
+
+  await page.getByTestId('nav-cases').click()
+  await page.getByTestId('case-row').first().click()
+  await page.getByTestId('fill-form-prompt').click()
+  await page.getByTestId('fill-form-template-option').click()
+
+  // Deliberately far more text than a 2-line ruled field can ever fit, at any
+  // allowed font size — the ruled-line engine's own floor still has to give up
+  // honestly here, not silently drop it without telling the user.
+  const excessiveText = 'The defendant breached the agreement on multiple separate occasions. '.repeat(20)
+  await page.getByTestId('fill-form-field-input').fill(excessiveText)
+
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('fill-form-generate').click()])
+
+  await expect(page.getByTestId('fill-form-truncated-warning')).toBeVisible()
+  await expect(page.getByTestId('fill-form-truncated-warning')).toContainText('Statement of facts')
+  const path = await download.path()
+  const bytes = await readFile(path!)
+  expect(bytes.subarray(0, 4).toString('latin1')).toBe('%PDF')
+})
+
 test('a template with no mapped fields is honest about it, but still generates a downloadable copy', async ({ page }) => {
   await setUpVault(page)
   await createCaseAndOpenDashboard(page)

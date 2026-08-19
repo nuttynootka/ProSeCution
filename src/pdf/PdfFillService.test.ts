@@ -68,31 +68,44 @@ describe('fillTemplate', () => {
 
     const result = await fillTemplate(template, [mapping], { name: 'Maria Hartley' }, FONT_BYTES)
 
-    expect(await extractPdfText(result)).toContain('Maria Hartley')
+    expect(await extractPdfText(result.bytes)).toContain('Maria Hartley')
+    expect(result.truncatedFieldIds).toEqual([])
   })
 
-  it('word-wraps a multi-line field across several drawn lines, truncated at maxLines', async () => {
+  it('shrinks the font to fit text that would have overflowed maxLines at a fixed size, rather than dropping it', async () => {
     const template = await makeTemplateBytes(1)
     const mapping: FieldMapping = { id: 'm1', templateId: 't1', pageNum: 1, fields: [multiLineField], createdAt: 0, updatedAt: 0 }
-    // At this field's width/lineHeight, wrapText (verified directly below) breaks
-    // this into 5 lines — "The defendant" / "breached the" / "agreement on multiple"
-    // / "occasions during the" / "relevant period". multiLineField.maxLines is 3, so
-    // only the first three should actually make it into the drawn PDF.
+    // At this field's fixed original font size this wrapped to 5 lines and the last
+    // two ("relevant period") were silently dropped past maxLines=3 — the exact bug
+    // the ruled-line paragraph engine (Chunk 45) exists to fix. At this field's real
+    // width/lineHeight the engine finds a smaller font (verified directly: ~7.7pt)
+    // that wraps the same text into exactly 3 lines, so nothing is lost.
     const longText = 'The defendant breached the agreement on multiple occasions during the relevant period'
 
     const result = await fillTemplate(template, [mapping], { facts: longText }, FONT_BYTES)
-    const extracted = await extractPdfText(result)
+    const extracted = await extractPdfText(result.bytes)
 
-    // First three lines' words are there...
     expect(extracted).toContain('defendant')
     expect(extracted).toContain('breached')
     expect(extracted).toContain('multiple')
-    // ...but content past maxLines is genuinely dropped, not merely wrapped further —
-    // an earlier version of this test asserted the opposite by mistake and only
-    // caught the real maxLines-truncation behavior once verified against actual
-    // extracted text instead of an assumption.
-    expect(extracted).not.toContain('relevant')
-    expect(extracted).not.toContain('period')
+    expect(extracted).toContain('relevant')
+    expect(extracted).toContain('period')
+    expect(result.truncatedFieldIds).toEqual([])
+  })
+
+  it('still truncates — and discloses it via truncatedFieldIds — when even the smallest font size cannot fit everything', async () => {
+    const template = await makeTemplateBytes(1)
+    const mapping: FieldMapping = { id: 'm1', templateId: 't1', pageNum: 1, fields: [multiLineField], createdAt: 0, updatedAt: 0 }
+    const veryLongText =
+      'The defendant breached the agreement on multiple separate occasions during the relevant period, causing substantial and ongoing financial harm to the plaintiff that has not yet been remedied in any way whatsoever despite repeated good faith attempts at informal resolution'
+
+    const result = await fillTemplate(template, [mapping], { facts: veryLongText }, FONT_BYTES)
+    const extracted = await extractPdfText(result.bytes)
+
+    expect(extracted).toContain('defendant')
+    expect(extracted).not.toContain('whatsoever')
+    expect(extracted).not.toContain('informal resolution')
+    expect(result.truncatedFieldIds).toEqual(['facts'])
   })
 
   it('skips a field with no resolved value — draws nothing for it', async () => {
@@ -101,7 +114,7 @@ describe('fillTemplate', () => {
 
     const result = await fillTemplate(template, [mapping], {}, FONT_BYTES)
 
-    expect(await extractPdfText(result)).not.toContain('Maria Hartley')
+    expect(await extractPdfText(result.bytes)).not.toContain('Maria Hartley')
   })
 
   it('draws page-2 fields on page 2, not page 1', async () => {
@@ -114,11 +127,11 @@ describe('fillTemplate', () => {
     ]
 
     const result = await fillTemplate(template, mappings, { p1field: 'PAGE-ONE-MARKER', p2field: 'PAGE-TWO-MARKER' }, FONT_BYTES)
-    const reloaded = await PDFDocument.load(result)
+    const reloaded = await PDFDocument.load(result.bytes)
 
     expect(reloaded.getPageCount()).toBe(2)
-    const page1Text = await extractPdfText(result, 1)
-    const page2Text = await extractPdfText(result, 2)
+    const page1Text = await extractPdfText(result.bytes, 1)
+    const page2Text = await extractPdfText(result.bytes, 2)
     expect(page1Text).toContain('PAGE-ONE-MARKER')
     expect(page1Text).not.toContain('PAGE-TWO-MARKER')
     expect(page2Text).toContain('PAGE-TWO-MARKER')
@@ -154,13 +167,13 @@ describe('fillTemplate', () => {
       FONT_BYTES,
     )
 
-    expect(await extractPdfText(result)).toContain('R. Cordova')
+    expect(await extractPdfText(result.bytes)).toContain('R. Cordova')
   })
 
   it('preserves the page count and produces a re-loadable PDF', async () => {
     const template = await makeTemplateBytes(3)
     const result = await fillTemplate(template, [], {}, FONT_BYTES)
-    const reloaded = await PDFDocument.load(result)
+    const reloaded = await PDFDocument.load(result.bytes)
     expect(reloaded.getPageCount()).toBe(3)
   })
 
@@ -168,7 +181,9 @@ describe('fillTemplate', () => {
     const template = await makeTemplateBytes(1)
     const mapping: FieldMapping = { id: 'm1', templateId: 't1', pageNum: 5, fields: [singleLineField], createdAt: 0, updatedAt: 0 }
 
-    await expect(fillTemplate(template, [mapping], { name: 'x' }, FONT_BYTES)).resolves.toBeInstanceOf(Uint8Array)
+    const result = await fillTemplate(template, [mapping], { name: 'x' }, FONT_BYTES)
+    expect(result.bytes).toBeInstanceOf(Uint8Array)
+    expect(result.truncatedFieldIds).toEqual([])
   })
 })
 

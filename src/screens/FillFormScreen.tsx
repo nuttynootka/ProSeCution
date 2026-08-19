@@ -44,6 +44,7 @@ export function FillFormScreen() {
   const [values, setValues] = useState<FillFieldValues>({})
   const [pageNum, setPageNum] = useState(1)
   const [compliance, setCompliance] = useState<ComplianceReport | null>(null)
+  const [truncatedFieldIds, setTruncatedFieldIds] = useState<string[]>([])
 
   useEffect(() => {
     if (!caseId || !templateId) return
@@ -91,14 +92,16 @@ export function FillFormScreen() {
     if (!templateId) return
     setPhase('generating')
     setCompliance(null)
+    setTruncatedFieldIds([])
     try {
       const blob = await pdfTemplateRepository.getFileBlob(templateId)
       if (!blob) throw new Error('template file missing')
       const bytes = new Uint8Array(await blob.arrayBuffer())
       const fontBytes = await loadFillFont()
       const filled = await fillTemplate(bytes, mappings, values, fontBytes)
-      triggerPdfDownload(pdfFilename(template?.name ?? 'form'), filled)
-      setCompliance(await checkCompliance(filled, mappings))
+      triggerPdfDownload(pdfFilename(template?.name ?? 'form'), filled.bytes)
+      setCompliance(await checkCompliance(filled.bytes, mappings))
+      setTruncatedFieldIds(filled.truncatedFieldIds)
       setPhase('ready')
     } catch {
       setPhase('generate-error')
@@ -113,6 +116,8 @@ export function FillFormScreen() {
 
   const currentFields = fieldsForPage(mappings, pageNum)
   const totalFields = mappings.reduce((sum, m) => sum + m.fields.length, 0)
+  const allFields = mappings.flatMap((m) => m.fields)
+  const truncatedFieldLabels = truncatedFieldIds.map((id) => allFields.find((f) => f.fieldId === id)?.label || id)
 
   return (
     <div className={styles.root} data-testid="fill-form-screen">
@@ -170,6 +175,13 @@ export function FillFormScreen() {
         {phase === 'generate-error' && (
           <div className={styles.errorBanner} role="alert" data-testid="fill-form-generate-error">
             Could not generate the PDF. Please try again.
+          </div>
+        )}
+
+        {truncatedFieldLabels.length > 0 && (
+          <div className={styles.errorBanner} role="alert" data-testid="fill-form-truncated-warning">
+            Some text didn't fully fit even at the smallest readable size and was cut off: {truncatedFieldLabels.join(', ')}.
+            Shorten it or split it across fields, then generate again.
           </div>
         )}
 
