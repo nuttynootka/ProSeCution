@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { DraftingPanel } from '../agents/DraftingPanel'
 import { caseRepository, formatJurisdiction, type Case } from '../cases'
 import { GlassSurface } from '../components/GlassSurface'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
@@ -71,13 +72,14 @@ export function CounselScreen() {
         </div>
 
         {tab === 'drafting' ? (
-          <GlassSurface style={{ padding: 16 }} data-testid="counsel-drafting-panel">
-            <div className={styles.panelKicker}>MOTION DRAFTING</div>
-            <div className={styles.panelNote}>
-              The three-stage drafting pipeline (outline → verified-citation draft → critique) for{' '}
-              {selectedCase.county}, {formatJurisdiction(selectedCase.state)} arrives in Chunk 43.
-            </div>
-          </GlassSurface>
+          <div data-testid="counsel-drafting-panel">
+            <DraftingPanel
+              key={selectedCase.id}
+              jurisdiction={selectedCase.state}
+              caseType={selectedCase.caseType}
+              caseLabel={`${selectedCase.county}, ${formatJurisdiction(selectedCase.state)}`}
+            />
+          </div>
         ) : (
           <GlassSurface style={{ padding: 16 }} data-testid="counsel-audit-panel">
             <div className={styles.panelKicker}>OPPOSING FILING AUDIT</div>

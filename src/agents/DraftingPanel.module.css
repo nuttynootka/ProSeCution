@@ -1,0 +1,60 @@
+.factsTextarea {
+  padding: 12px 14px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--plcm-glass-border);
+  color: var(--plcm-text);
+  font: 500 12.5px/1.5 var(--plcm-font-sans);
+  resize: vertical;
+}
+
+.factsTextarea:focus {
+  outline: 2px solid var(--plcm-purple-light);
+  outline-offset: 1px;
+}
+
+.resultStack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note {
+  margin: 0;
+  font: 500 11.5px/1.5 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.warnNote {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fca5a5;
+  font: 500 11.5px/1.5 var(--plcm-font-sans);
+}
+
+.panelKicker {
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: var(--plcm-text-faint);
+}
+
+.draftBody {
+  margin: 12px 0 0;
+  font: 400 12.5px/1.65 var(--plcm-font-sans);
+  color: var(--plcm-text);
+  white-space: pre-wrap;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.adoptedNote {
+  padding: 12px 14px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  color: #86efac;
+  font: 500 12px/1.4 var(--plcm-font-sans);
+}
