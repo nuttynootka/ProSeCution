@@ -201,6 +201,7 @@ export function VaultScreen() {
             accept=".plcmbackup,application/json"
             className={styles.fileInput}
             onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+            aria-label="Choose a backup file to restore"
             data-testid="backup-import-file"
           />
           <TextInput

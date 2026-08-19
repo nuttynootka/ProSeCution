@@ -44,6 +44,16 @@
   font: 600 12px/1 var(--plcm-font-sans);
   color: var(--plcm-text-dim);
   transition: all 0.22s ease;
+  /*
+   * The real bug axe-core caught (Chunk 49), not a color problem: this is a plain
+   * <button> with no reset, so the inactive tab was rendering with the browser's
+   * own default dark-mode button-face background (~#6b6b6b) instead of the
+   * tabStrip container's intended translucent background showing through — the
+   * text-dim/#6b6b6b combination genuinely failed contrast, but the fix is
+   * removing the accidental opaque background, not darkening the text further.
+   */
+  background: none;
+  border: none;
 }
 
 .tabActive {
