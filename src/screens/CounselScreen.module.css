@@ -1,0 +1,64 @@
+.root {
+  min-height: 100%;
+}
+
+.header {
+  padding: 20px 18px 4px;
+}
+
+.kicker {
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: var(--plcm-text-faint);
+}
+
+.title {
+  margin-top: 4px;
+  font: 700 21px/1.15 var(--plcm-font-sans);
+  letter-spacing: -0.02em;
+  color: var(--plcm-heading);
+}
+
+.body {
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: rise-in 0.35s ease both;
+}
+
+.tabStrip {
+  display: flex;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--plcm-glass-border);
+}
+
+.tab {
+  flex: 1;
+  padding: 9px;
+  border-radius: 11px;
+  text-align: center;
+  cursor: pointer;
+  font: 600 12px/1 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+  transition: all 0.22s ease;
+}
+
+.tabActive {
+  background: linear-gradient(120deg, rgba(124, 58, 237, 0.5), rgba(37, 99, 235, 0.32));
+  color: #f2f0ff;
+}
+
+.panelKicker {
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: var(--plcm-text-faint);
+}
+
+.panelNote {
+  margin-top: 11px;
+  font: 400 12.5px/1.6 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
