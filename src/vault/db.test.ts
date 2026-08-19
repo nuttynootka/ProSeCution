@@ -157,6 +157,63 @@ describe('PlcmDatabase migrations', () => {
     expect(await current.offlineQueue.get('oq-1')).toMatchObject({ dataEnc: 'x' })
   })
 
+  it('preserves v7-era offlineQueue data when reopened at v8, and adds llmSettings cleanly', async () => {
+    const name = `migration-test-${crypto.randomUUID()}`
+    const v7 = new Dexie(name)
+    v7.version(1).stores({ vaultMeta: 'id' })
+    v7.version(2).stores({ vaultMeta: 'id', cases: 'id, createdAt', parties: 'id, caseId, createdAt' })
+    v7.version(3).stores({ vaultMeta: 'id', cases: 'id, createdAt', parties: 'id, caseId, createdAt', documents: 'id, caseId, createdAt' })
+    v7.version(4).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+    })
+    v7.version(5).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+    })
+    v7.version(6).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+    })
+    v7.version(7).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+      offlineQueue: 'id, createdAt',
+    })
+    openDbs.push(v7)
+    await v7.table('offlineQueue').put({ id: 'oq-1', createdAt: 1, attempts: 2, dataEnc: 'x' })
+    v7.close()
+
+    const current = new PlcmDatabase(name)
+    openDbs.push(current)
+    await current.open()
+
+    expect(await current.offlineQueue.get('oq-1')).toMatchObject({ dataEnc: 'x', attempts: 2 })
+    expect(await current.llmSettings.get('singleton')).toBeUndefined()
+    await current.llmSettings.put({ id: 'singleton', dataEnc: 'x' })
+    expect(await current.llmSettings.get('singleton')).toMatchObject({ dataEnc: 'x' })
+  })
+
   it('opens an already-current-version database idempotently, with no data loss on a second open', async () => {
     const name = `migration-test-${crypto.randomUUID()}`
     const first = new PlcmDatabase(name)

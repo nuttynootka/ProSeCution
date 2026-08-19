@@ -138,6 +138,17 @@ export interface StoredOfflineQueueRecord {
 }
 
 /**
+ * Singleton row (id: 'singleton', same pattern as VaultMetaRecord) holding BYOK
+ * settings — which provider is active, and each provider's API key/model/base URL.
+ * API keys are exactly the kind of sensitive field the encrypted-envelope pattern
+ * already exists for, so this is one more content-shaped table, not a new scheme.
+ */
+export interface StoredLlmSettingsRecord {
+  id: 'singleton'
+  dataEnc: string
+}
+
+/**
  * Schema versions are additive and permanent: once a `.version(n)` block ships, it
  * is never edited, only superseded by a new `.version(n + 1)` with an `.upgrade()`
  * migration. This is the versioned-migration discipline the blueprint calls for —
@@ -155,8 +166,10 @@ export interface StoredOfflineQueueRecord {
  * (id, templateId, createdAt).
  * v6: proofOfService, indexed the same way as deadlines/documents/parties
  * (id, caseId, createdAt).
- * v7 (this chunk): offlineQueue, indexed by id and createdAt (FIFO replay order) —
- * not case-scoped, see StoredOfflineQueueRecord.
+ * v7: offlineQueue, indexed by id and createdAt (FIFO replay order) — not
+ * case-scoped, see StoredOfflineQueueRecord.
+ * v8 (this chunk): llmSettings, a singleton row indexed only by id — same shape
+ * as vaultMeta's own single-row table.
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
@@ -168,6 +181,7 @@ export class PlcmDatabase extends Dexie {
   fieldMappings!: EntityTable<StoredFieldMappingRecord, 'id'>
   proofOfService!: EntityTable<StoredProofOfServiceRecord, 'id'>
   offlineQueue!: EntityTable<StoredOfflineQueueRecord, 'id'>
+  llmSettings!: EntityTable<StoredLlmSettingsRecord, 'id'>
 
   constructor(name = 'plcm') {
     super(name)
@@ -221,6 +235,18 @@ export class PlcmDatabase extends Dexie {
       fieldMappings: 'id, templateId, createdAt',
       proofOfService: 'id, caseId, createdAt',
       offlineQueue: 'id, createdAt',
+    })
+    this.version(8).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+      offlineQueue: 'id, createdAt',
+      llmSettings: 'id',
     })
   }
 }

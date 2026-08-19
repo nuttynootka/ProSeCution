@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { exportBackup, importBackup, IncorrectBackupPassphraseError, InvalidBackupFileError } from '../backup'
 import { GlassSurface } from '../components/GlassSurface'
+import { LlmProviderSettingsCard } from '../llm/LlmProviderSettingsCard'
 import {
   estimateStorageUsage,
   formatBytes,
@@ -227,6 +228,8 @@ export function VaultScreen() {
             {importPhase === 'importing' ? 'Restoring…' : 'Restore backup'}
           </PrimaryButton>
         </GlassSurface>
+
+        <LlmProviderSettingsCard />
       </div>
     </div>
   )
