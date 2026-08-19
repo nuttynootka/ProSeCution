@@ -22,12 +22,20 @@ export interface PageSize {
   height: number
 }
 
+export interface PdfTextItem {
+  text: string
+  /** Axis-aligned enclosing box, in the same top-down scale-1 point coordinates as `getPageSize`/`TemplateField.boundingBox`. Approximates unrotated text (the overwhelming majority of court forms) as a straight rectangle — good enough for Agent C's (Chunk 40) review-before-use field suggestions, not a general PDF text-layout engine. */
+  boundingBox: { left: number; top: number; width: number; height: number }
+}
+
 export interface PdfDocumentHandle {
   pageCount: number
   /** Renders one page (1-indexed, matching pdf.js's own convention) into the given canvas at the given CSS-pixel scale. */
   renderPage(pageNum: number, scale: number, canvas: HTMLCanvasElement): Promise<void>
   /** The page's own size at scale 1 — Template Studio (Chunk 18) needs this to convert between on-screen tap coordinates and the point-based coordinates field mappings are stored in. */
   getPageSize(pageNum: number): Promise<PageSize>
+  /** Real text items (pdf.js `getTextContent()`) with position data, for Agent C's (Chunk 40) field-suggestion input. Empty for a scanned/image-only page with no text layer — callers must treat that as "no extractable text", not silently produce nothing. */
+  getPageTextItems(pageNum: number): Promise<PdfTextItem[]>
   /** Releases the document's worker-side resources. Not optional to call — pdf.js keeps a document's data in the worker until this runs. */
   destroy(): void
 }
@@ -52,6 +60,29 @@ export async function loadPdf(data: ArrayBuffer | Uint8Array): Promise<PdfDocume
       const page = await doc.getPage(pageNum)
       const { width, height } = page.getViewport({ scale: 1 })
       return { width, height }
+    },
+    async getPageTextItems(pageNum) {
+      const page = await doc.getPage(pageNum)
+      const viewport = page.getViewport({ scale: 1 })
+      const content = await page.getTextContent()
+      const items: PdfTextItem[] = []
+      for (const raw of content.items) {
+        if (!('str' in raw) || !raw.str.trim()) continue
+        const originX = raw.transform[4]
+        const originY = raw.transform[5]
+        const [x0, y0] = viewport.convertToViewportPoint(originX, originY)
+        const [x1, y1] = viewport.convertToViewportPoint(originX + raw.width, originY + raw.height)
+        items.push({
+          text: raw.str,
+          boundingBox: {
+            left: Math.min(x0, x1),
+            top: Math.min(y0, y1),
+            width: Math.abs(x1 - x0),
+            height: Math.abs(y1 - y0),
+          },
+        })
+      }
+      return items
     },
     destroy() {
       void loadingTask.destroy()

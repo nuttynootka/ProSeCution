@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { suggestFieldsFromPage } from '../agents'
+import { getProviderDef, llmSettingsRepository } from '../llm'
 import {
   boundingBoxToFractional,
   defaultFieldRect,
@@ -22,6 +24,15 @@ import { ChipGroup } from '../wizard/ChipGroup'
 import { SectionLabel, TextInput } from '../wizard/Field'
 import { PrimaryButton } from '../wizard/PrimaryButton'
 import styles from './TemplateStudioScreen.module.css'
+
+type SuggestState = 'idle' | 'working' | 'no-provider' | 'no-text' | 'llm-error' | 'done'
+
+const SUGGEST_NOTE: Record<Exclude<SuggestState, 'idle' | 'working'>, string> = {
+  'no-provider': 'Set up an AI provider in Vault settings first to use auto-suggest.',
+  'no-text': "No extractable text on this page — it's likely a scanned image. Auto-suggest only works on a PDF's real text layer.",
+  'llm-error': "Couldn't get suggestions right now. Check your AI provider settings and try again.",
+  done: 'Suggested fields added — review, adjust, or delete them like any other field.',
+}
 
 const CORNERS: Corner[] = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']
 const TYPE_OPTIONS = [
@@ -47,6 +58,7 @@ export function TemplateStudioScreen() {
   const [fields, setFields] = useState<TemplateField[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [saveNote, setSaveNote] = useState<string | null>(null)
+  const [suggestState, setSuggestState] = useState<SuggestState>('idle')
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
@@ -105,6 +117,7 @@ export function TemplateStudioScreen() {
       setPageSize(size)
       setFields(mapping?.fields ?? [])
       setSelectedId(null)
+      setSuggestState('idle')
     }
 
     void run()
@@ -243,6 +256,39 @@ export function TemplateStudioScreen() {
     setTimeout(() => setSaveNote(null), 1500)
   }
 
+  const handleAutoSuggest = async () => {
+    const doc = docRef.current
+    if (!doc) return
+    setSuggestState('working')
+
+    const settings = await llmSettingsRepository.get()
+    const providerId = settings.activeProviderId
+    const provider = providerId ? getProviderDef(providerId) : undefined
+    const config = providerId ? settings.providerConfigs[providerId] : undefined
+    if (!provider || (provider.requiresApiKey && !config?.apiKey)) {
+      setSuggestState('no-provider')
+      return
+    }
+
+    const textItems = await doc.getPageTextItems(pageNum)
+    const result = await suggestFieldsFromPage({
+      textItems,
+      provider,
+      apiKey: config?.apiKey ?? '',
+      model: config?.selectedModel ?? provider.defaultModel,
+    })
+
+    if (result.status === 'no-text' || result.status === 'llm-error') {
+      setSuggestState(result.status)
+      return
+    }
+
+    const existingIds = new Set(fields.map((f) => f.fieldId))
+    const newFields = result.fields.map((f) => (existingIds.has(f.fieldId) ? { ...f, fieldId: newFieldId() } : f))
+    setFields((prev) => [...prev, ...newFields])
+    setSuggestState('done')
+  }
+
   const goToPage = async (next: number) => {
     if (!template || next < 1 || next > template.pageCount) return
     await persistCurrentPage()
@@ -343,6 +389,23 @@ export function TemplateStudioScreen() {
         >
           Next page
         </button>
+      </div>
+
+      <div className={styles.suggestRow}>
+        <button
+          type="button"
+          className={styles.suggestButton}
+          onClick={() => void handleAutoSuggest()}
+          disabled={suggestState === 'working'}
+          data-testid="studio-auto-suggest"
+        >
+          {suggestState === 'working' ? 'Suggesting…' : 'Auto-suggest fields'}
+        </button>
+        {suggestState !== 'idle' && suggestState !== 'working' && (
+          <span className={styles.suggestNote} data-testid="studio-suggest-note">
+            {SUGGEST_NOTE[suggestState]}
+          </span>
+        )}
       </div>
 
       {selected && (
