@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#08080b" />
     <meta name="color-scheme" content="dark" />
+    <!--
+      Content-Security-Policy (Chunk 50's security review). GitHub Pages serves
+      static files with no server-side header control, so a <meta> tag is the only
+      delivery mechanism available — which also means `frame-ancestors` is a real
+      spec limitation here, not an oversight: browsers ignore that directive
+      entirely when CSP arrives via <meta>, so it's left out rather than included
+      as a no-op that would look like clickjacking protection this deployment can't
+      actually provide without real HTTP headers.
+
+      connect-src is deliberately `https:` plus local http(s)/ws(s) rather than a
+      fixed provider allowlist: this app's own architecture is BYOK (Chunk 38) —
+      generation runs client-side, direct to whichever provider the user configures,
+      including a freely-editable Ollama base URL that defaults to plain
+      http://localhost:11434 (a real local server, not a typo) — so the actual set
+      of hosts this app calls is only known at runtime, per user, never at build
+      time. A fixed allowlist would either break BYOK/Ollama or have to be rebuilt
+      and redeployed every time a new provider is added. `https:` still blocks any
+      non-TLS remote host outright; the localhost/127.0.0.1 http(s)/ws(s) allowance
+      covers Ollama and this project's own local dev server (Vite's HMR websocket),
+      not a general exception.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        font-src 'self';
+        worker-src 'self' blob:;
+        connect-src 'self' https: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*;
+        manifest-src 'self';
+        base-uri 'self';
+        form-action 'self';
+        object-src 'none'"
+    />
     <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
     <title>Pro Se Legal Case Manager</title>
