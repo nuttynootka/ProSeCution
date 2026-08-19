@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
+import { AuditPanel } from '../agents/AuditPanel'
 import { DraftingPanel } from '../agents/DraftingPanel'
 import { caseRepository, formatJurisdiction, type Case } from '../cases'
-import { GlassSurface } from '../components/GlassSurface'
 import { PlaceholderScreen } from '../components/PlaceholderScreen'
 import { ChipGroup } from '../wizard/ChipGroup'
 import styles from './CounselScreen.module.css'
@@ -10,10 +10,9 @@ type CounselTab = 'drafting' | 'audit'
 
 /**
  * The Co-Counsel shell (Chunk 42): a case picker plus the Drafting/Opposing-audit
- * tab strip from the mockup. Real navigation and case-scoping, but each tab's actual
- * content is still an honest placeholder — Agent D's three-stage drafting pipeline
- * (Chunk 43) and Agent B's opposing-filing audit (Chunk 44) both plug into this shell
- * rather than being built here.
+ * tab strip from the mockup, scoped to whichever case is selected. Drafting renders
+ * Agent D's three-stage pipeline (Chunk 43); Opposing audit renders Agent B's filing
+ * analysis (Chunk 44).
  */
 export function CounselScreen() {
   const [cases, setCases] = useState<Case[] | null>(null)
@@ -81,13 +80,14 @@ export function CounselScreen() {
             />
           </div>
         ) : (
-          <GlassSurface style={{ padding: 16 }} data-testid="counsel-audit-panel">
-            <div className={styles.panelKicker}>OPPOSING FILING AUDIT</div>
-            <div className={styles.panelNote}>
-              A strength-meter analysis of an opposing filing for {selectedCase.county}, {formatJurisdiction(selectedCase.state)}{' '}
-              arrives in Chunk 44.
-            </div>
-          </GlassSurface>
+          <div data-testid="counsel-audit-panel">
+            <AuditPanel
+              key={selectedCase.id}
+              jurisdiction={selectedCase.state}
+              caseType={selectedCase.caseType}
+              caseLabel={`${selectedCase.county}, ${formatJurisdiction(selectedCase.state)}`}
+            />
+          </div>
         )}
       </div>
     </div>

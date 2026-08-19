@@ -1,0 +1,129 @@
+.filingTextarea {
+  padding: 12px 14px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--plcm-glass-border);
+  color: var(--plcm-text);
+  font: 500 12.5px/1.5 var(--plcm-font-sans);
+  resize: vertical;
+}
+
+.filingTextarea:focus {
+  outline: 2px solid var(--plcm-purple-light);
+  outline-offset: 1px;
+}
+
+.resultStack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note {
+  margin: 0;
+  font: 500 11.5px/1.5 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.warnNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fca5a5;
+  font: 500 11.5px/1.5 var(--plcm-font-sans);
+}
+
+.panelKicker {
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: var(--plcm-text-faint);
+}
+
+.strengthRow {
+  margin-top: 12px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.strengthScore {
+  font: 800 40px/1 var(--plcm-font-sans);
+  letter-spacing: -0.04em;
+  color: var(--plcm-heading);
+}
+
+.strengthSub {
+  font: 500 11px/1.4 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+  padding-bottom: 5px;
+}
+
+.strengthBar {
+  margin-top: 13px;
+  display: flex;
+  gap: 3px;
+}
+
+.strengthSegment {
+  flex: 1;
+  height: 22px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.strengthSegmentFilled {
+  background: linear-gradient(180deg, #7c3aed, #4338ca);
+}
+
+.gapTag {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 7px;
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.1em;
+  color: #0c0c11;
+  background: #f59e0b;
+}
+
+.gapBody {
+  margin-top: 9px;
+  font: 400 11.5px/1.55 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.gapCite {
+  margin-top: 10px;
+  font: 400 9.5px/1.2 var(--plcm-font-mono);
+  color: #bfd4ff;
+}
+
+.contradictionRow {
+  margin: 9px 0 0;
+  font: 400 11.5px/1.55 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.optionRow {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--plcm-glass-border);
+}
+
+.optionRow:first-of-type {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: none;
+}
+
+.optionTitle {
+  font: 600 12.5px/1.3 var(--plcm-font-sans);
+  color: var(--plcm-heading);
+}
+
+.optionCite {
+  margin-top: 4px;
+  font: 400 9.5px/1.2 var(--plcm-font-mono);
+  color: #bfd4ff;
+}
