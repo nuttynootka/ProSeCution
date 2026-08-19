@@ -1,0 +1,55 @@
+.root {
+  min-height: 100%;
+}
+
+.header {
+  padding: 14px 18px 8px;
+}
+
+.kicker {
+  font: 500 9px/1 var(--plcm-font-mono);
+  letter-spacing: 0.2em;
+  color: var(--plcm-text-faint);
+}
+
+.title {
+  margin-top: 3px;
+  font: 700 17px/1.2 var(--plcm-font-sans);
+  color: var(--plcm-heading);
+}
+
+.body {
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note {
+  margin: 0;
+  font: 400 12px/1.55 var(--plcm-font-sans);
+  color: var(--plcm-text-dim);
+}
+
+.successBanner {
+  padding: 12px 14px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  color: #86efac;
+  font: 500 12px/1.4 var(--plcm-font-sans);
+}
+
+.errorBanner {
+  padding: 12px 14px;
+  border-radius: var(--plcm-radius-sm);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fca5a5;
+  font: 500 12.5px/1.4 var(--plcm-font-sans);
+}
+
+.fileInput {
+  font: 500 11.5px/1.4 var(--plcm-font-sans);
+  color: var(--plcm-text);
+}
