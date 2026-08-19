@@ -229,6 +229,9 @@ export function CaseDashboardScreen() {
         />
         <FillFormCard caseId={caseRecord.id} />
         <AskAgentACard jurisdiction={caseRecord.state} caseType={caseRecord.caseType} />
+        <Link to={`/cases/${caseId}/exhibits`} className={styles.feeWaiverDownload} data-testid="exhibit-list-link">
+          Build exhibit list
+        </Link>
 
         {caseRecord.feeWaiverStatus && (
           <button

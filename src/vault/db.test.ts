@@ -214,6 +214,75 @@ describe('PlcmDatabase migrations', () => {
     expect(await current.llmSettings.get('singleton')).toMatchObject({ dataEnc: 'x' })
   })
 
+  it('preserves v8-era llmSettings data when reopened at v9, and adds exhibitLists cleanly', async () => {
+    const name = `migration-test-${crypto.randomUUID()}`
+    const v8 = new Dexie(name)
+    v8.version(1).stores({ vaultMeta: 'id' })
+    v8.version(2).stores({ vaultMeta: 'id', cases: 'id, createdAt', parties: 'id, caseId, createdAt' })
+    v8.version(3).stores({ vaultMeta: 'id', cases: 'id, createdAt', parties: 'id, caseId, createdAt', documents: 'id, caseId, createdAt' })
+    v8.version(4).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+    })
+    v8.version(5).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+    })
+    v8.version(6).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+    })
+    v8.version(7).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+      offlineQueue: 'id, createdAt',
+    })
+    v8.version(8).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+      offlineQueue: 'id, createdAt',
+      llmSettings: 'id',
+    })
+    openDbs.push(v8)
+    await v8.table('llmSettings').put({ id: 'singleton', dataEnc: 'x' })
+    v8.close()
+
+    const current = new PlcmDatabase(name)
+    openDbs.push(current)
+    await current.open()
+
+    expect(await current.llmSettings.get('singleton')).toMatchObject({ dataEnc: 'x' })
+    expect(await current.exhibitLists.get('case-1')).toBeUndefined()
+    await current.exhibitLists.put({ id: 'case-1', caseId: 'case-1', createdAt: 1, updatedAt: 1, dataEnc: 'x' })
+    expect(await current.exhibitLists.get('case-1')).toMatchObject({ dataEnc: 'x' })
+  })
+
   it('opens an already-current-version database idempotently, with no data loss on a second open', async () => {
     const name = `migration-test-${crypto.randomUUID()}`
     const first = new PlcmDatabase(name)

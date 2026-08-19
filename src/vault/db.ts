@@ -149,6 +149,22 @@ export interface StoredLlmSettingsRecord {
 }
 
 /**
+ * One row per case (id === caseId, the same "singleton scoped to a real key"
+ * pattern StoredLlmSettingsRecord uses for the whole app) holding that case's
+ * exhibit list: an ordered set of {documentId, description} entries. Labels
+ * (Exhibit A, B, C...) are derived from list order at read time (see
+ * evidence/exhibitLabels.ts), not stored — storing a label would let it drift out
+ * of sync with the order the moment an item is reordered or removed.
+ */
+export interface StoredExhibitListRecord {
+  id: string
+  caseId: string
+  createdAt: number
+  updatedAt: number
+  dataEnc: string
+}
+
+/**
  * Schema versions are additive and permanent: once a `.version(n)` block ships, it
  * is never edited, only superseded by a new `.version(n + 1)` with an `.upgrade()`
  * migration. This is the versioned-migration discipline the blueprint calls for —
@@ -168,8 +184,11 @@ export interface StoredLlmSettingsRecord {
  * (id, caseId, createdAt).
  * v7: offlineQueue, indexed by id and createdAt (FIFO replay order) — not
  * case-scoped, see StoredOfflineQueueRecord.
- * v8 (this chunk): llmSettings, a singleton row indexed only by id — same shape
+ * v8: llmSettings, a singleton row indexed only by id — same shape
  * as vaultMeta's own single-row table.
+ * v9 (this chunk): exhibitLists, indexed the same way as documents/deadlines/
+ * proofOfService (id, caseId) — createdAt isn't part of the index since there's at
+ * most one row per case, nothing to sort chronologically.
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
@@ -182,6 +201,7 @@ export class PlcmDatabase extends Dexie {
   proofOfService!: EntityTable<StoredProofOfServiceRecord, 'id'>
   offlineQueue!: EntityTable<StoredOfflineQueueRecord, 'id'>
   llmSettings!: EntityTable<StoredLlmSettingsRecord, 'id'>
+  exhibitLists!: EntityTable<StoredExhibitListRecord, 'id'>
 
   constructor(name = 'plcm') {
     super(name)
@@ -247,6 +267,19 @@ export class PlcmDatabase extends Dexie {
       proofOfService: 'id, caseId, createdAt',
       offlineQueue: 'id, createdAt',
       llmSettings: 'id',
+    })
+    this.version(9).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+      offlineQueue: 'id, createdAt',
+      llmSettings: 'id',
+      exhibitLists: 'id, caseId',
     })
   }
 }

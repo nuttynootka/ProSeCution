@@ -10,6 +10,7 @@ import { DeadlinesScreen } from './screens/DeadlinesScreen'
 import { DocumentDetailScreen } from './screens/DocumentDetailScreen'
 import { DocumentReviewScreen } from './screens/DocumentReviewScreen'
 import { DocumentsScreen } from './screens/DocumentsScreen'
+import { ExhibitListScreen } from './screens/ExhibitListScreen'
 import { FillFormScreen } from './screens/FillFormScreen'
 import { IntakeScreen } from './screens/IntakeScreen'
 import { TemplateStudioScreen } from './screens/TemplateStudioScreen'
@@ -44,6 +45,7 @@ export function App() {
             <Route path="/cases/new" element={<NewCaseWizard />} />
             <Route path="/cases/:caseId/intake" element={<CaptureScreen />} />
             <Route path="/cases/:caseId/documents" element={<DocumentsScreen />} />
+            <Route path="/cases/:caseId/exhibits" element={<ExhibitListScreen />} />
             <Route path="/cases/:caseId/documents/:documentId/review" element={<DocumentReviewScreen />} />
             <Route path="/cases/:caseId/documents/:documentId" element={<DocumentDetailScreen />} />
             <Route path="/templates/:templateId" element={<TemplateStudioScreen />} />
