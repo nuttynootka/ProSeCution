@@ -111,6 +111,52 @@ describe('PlcmDatabase migrations', () => {
     expect(await current.proofOfService.get('pos-1')).toMatchObject({ dataEnc: 'x' })
   })
 
+  it('preserves v6-era proofOfService data when reopened at v7, and adds offlineQueue cleanly', async () => {
+    const name = `migration-test-${crypto.randomUUID()}`
+    const v6 = new Dexie(name)
+    v6.version(1).stores({ vaultMeta: 'id' })
+    v6.version(2).stores({ vaultMeta: 'id', cases: 'id, createdAt', parties: 'id, caseId, createdAt' })
+    v6.version(3).stores({ vaultMeta: 'id', cases: 'id, createdAt', parties: 'id, caseId, createdAt', documents: 'id, caseId, createdAt' })
+    v6.version(4).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+    })
+    v6.version(5).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+    })
+    v6.version(6).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+    })
+    openDbs.push(v6)
+    await v6.table('proofOfService').put({ id: 'pos-1', caseId: 'case-1', createdAt: 1, updatedAt: 1, dataEnc: 'x' })
+    v6.close()
+
+    const current = new PlcmDatabase(name)
+    openDbs.push(current)
+    await current.open()
+
+    expect(await current.proofOfService.get('pos-1')).toMatchObject({ dataEnc: 'x' })
+    expect(await current.offlineQueue.count()).toBe(0)
+    await current.offlineQueue.put({ id: 'oq-1', createdAt: 1, attempts: 0, dataEnc: 'x' })
+    expect(await current.offlineQueue.get('oq-1')).toMatchObject({ dataEnc: 'x' })
+  })
+
   it('opens an already-current-version database idempotently, with no data loss on a second open', async () => {
     const name = `migration-test-${crypto.randomUUID()}`
     const first = new PlcmDatabase(name)

@@ -122,6 +122,22 @@ export interface StoredProofOfServiceRecord {
 }
 
 /**
+ * The blueprint's `offline_request_queue` table — an AI request (an LLM call this
+ * app couldn't make while offline) saved for real replay once connectivity
+ * returns, rather than silently dropped. Not case-scoped (a query might span
+ * cases, or be a general question), so indexed only by createdAt for FIFO replay
+ * order. `attempts` isn't part of the encrypted content — it's operational
+ * metadata about the queue entry itself, not sensitive case content, and Chunk
+ * 37's replay logic needs to read/increment it without a decrypt round-trip.
+ */
+export interface StoredOfflineQueueRecord {
+  id: string
+  createdAt: number
+  attempts: number
+  dataEnc: string
+}
+
+/**
  * Schema versions are additive and permanent: once a `.version(n)` block ships, it
  * is never edited, only superseded by a new `.version(n + 1)` with an `.upgrade()`
  * migration. This is the versioned-migration discipline the blueprint calls for —
@@ -137,8 +153,10 @@ export interface StoredProofOfServiceRecord {
  * (see StoredDeadlineRecord), so there's nothing more to index than caseId/createdAt.
  * v5: pdfTemplates (id, createdAt — not case-scoped) and fieldMappings
  * (id, templateId, createdAt).
- * v6 (this chunk): proofOfService, indexed the same way as deadlines/documents/parties
+ * v6: proofOfService, indexed the same way as deadlines/documents/parties
  * (id, caseId, createdAt).
+ * v7 (this chunk): offlineQueue, indexed by id and createdAt (FIFO replay order) —
+ * not case-scoped, see StoredOfflineQueueRecord.
  */
 export class PlcmDatabase extends Dexie {
   vaultMeta!: EntityTable<VaultMetaRecord, 'id'>
@@ -149,6 +167,7 @@ export class PlcmDatabase extends Dexie {
   pdfTemplates!: EntityTable<StoredPdfTemplateRecord, 'id'>
   fieldMappings!: EntityTable<StoredFieldMappingRecord, 'id'>
   proofOfService!: EntityTable<StoredProofOfServiceRecord, 'id'>
+  offlineQueue!: EntityTable<StoredOfflineQueueRecord, 'id'>
 
   constructor(name = 'plcm') {
     super(name)
@@ -191,6 +210,17 @@ export class PlcmDatabase extends Dexie {
       pdfTemplates: 'id, createdAt',
       fieldMappings: 'id, templateId, createdAt',
       proofOfService: 'id, caseId, createdAt',
+    })
+    this.version(7).stores({
+      vaultMeta: 'id',
+      cases: 'id, createdAt',
+      parties: 'id, caseId, createdAt',
+      documents: 'id, caseId, createdAt',
+      deadlines: 'id, caseId, createdAt',
+      pdfTemplates: 'id, createdAt',
+      fieldMappings: 'id, templateId, createdAt',
+      proofOfService: 'id, caseId, createdAt',
+      offlineQueue: 'id, createdAt',
     })
   }
 }
